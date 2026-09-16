@@ -1,6 +1,7 @@
 import { getCurrentAdmin } from "@/lib/auth";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { Toaster } from "react-hot-toast";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,15 @@ export default async function AdminLayout({
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            zIndex: 99999,
+          },
+        }}
+      />
     </div>
   );
 }
