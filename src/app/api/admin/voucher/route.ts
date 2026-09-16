@@ -95,6 +95,7 @@ export async function PUT(request: Request) {
       donHangToiThieu,
       mucGiamToiDa,
       tongSoLuong,
+      ngayBatDau,
       ngayKetThuc,
       trangThai,
     } = body;
@@ -122,6 +123,7 @@ export async function PUT(request: Request) {
       if (donHangToiThieu !== undefined) updateData.DonHangToiThieu = Number(donHangToiThieu);
       if (mucGiamToiDa !== undefined) updateData.MucGiamToiDa = Number(mucGiamToiDa);
       if (tongSoLuong !== undefined) updateData.TongSoLuong = Number(tongSoLuong);
+      if (ngayBatDau) updateData.NgayBatDau = new Date(ngayBatDau);
       if (ngayKetThuc) updateData.NgayKetThuc = new Date(ngayKetThuc);
       if (trangThai) updateData.TrangThai = trangThai;
     }

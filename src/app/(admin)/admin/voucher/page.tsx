@@ -31,6 +31,32 @@ interface VoucherItem {
   _count?: { DonHangs: number };
 }
 
+function formatForDateTimeInput(date: Date | string) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function formatDisplayDateTime(date: Date | string) {
+  if (!date) return "--";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "--";
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const year = d.getFullYear();
+  return `${hours}:${minutes} ${day}/${month}/${year}`;
+}
+
 export default function AdminVoucherPage() {
   const [vouchers, setVouchers] = useState<VoucherItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,8 +74,8 @@ export default function AdminVoucherPage() {
     mucGiamToiDa: 50000,
     tongSoLuong: 100,
     gioiHanSuDung: 1,
-    ngayBatDau: new Date().toISOString().slice(0, 10),
-    ngayKetThuc: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+    ngayBatDau: formatForDateTimeInput(new Date()),
+    ngayKetThuc: formatForDateTimeInput(new Date(Date.now() + 30 * 24 * 3600 * 1000)),
     trangThai: "Active",
   });
 
@@ -78,6 +104,8 @@ export default function AdminVoucherPage() {
   const handleOpenCreate = () => {
     setEditingVoucher(null);
     setIsLockedPrice(false);
+    const now = new Date();
+    const future = new Date(Date.now() + 30 * 24 * 3600 * 1000);
     setFormData({
       maVoucher: `FBSHOP_${Date.now().toString().slice(-4)}`,
       loaiGiamGia: "TIEN",
@@ -86,8 +114,8 @@ export default function AdminVoucherPage() {
       mucGiamToiDa: 50000,
       tongSoLuong: 100,
       gioiHanSuDung: 1,
-      ngayBatDau: new Date().toISOString().slice(0, 10),
-      ngayKetThuc: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+      ngayBatDau: formatForDateTimeInput(now),
+      ngayKetThuc: formatForDateTimeInput(future),
       trangThai: "Active",
     });
     setShowModal(true);
@@ -106,8 +134,8 @@ export default function AdminVoucherPage() {
       mucGiamToiDa: Number(v.MucGiamToiDa),
       tongSoLuong: v.TongSoLuong,
       gioiHanSuDung: v.GioiHanSuDung,
-      ngayBatDau: new Date(v.NgayBatDau).toISOString().slice(0, 10),
-      ngayKetThuc: new Date(v.NgayKetThuc).toISOString().slice(0, 10),
+      ngayBatDau: formatForDateTimeInput(v.NgayBatDau),
+      ngayKetThuc: formatForDateTimeInput(v.NgayKetThuc),
       trangThai: v.TrangThai,
     });
     setShowModal(true);
@@ -189,8 +217,8 @@ export default function AdminVoucherPage() {
       "Giảm tối đa": Number(v.MucGiamToiDa),
       "Tổng số lượng": v.TongSoLuong,
       "Lượt đã dùng": v._count?.DonHangs || 0,
-      "Bắt đầu": new Date(v.NgayBatDau).toLocaleDateString("vi-VN"),
-      "Kết thúc": new Date(v.NgayKetThuc).toLocaleDateString("vi-VN"),
+      "Bắt đầu": formatDisplayDateTime(v.NgayBatDau),
+      "Kết thúc": formatDisplayDateTime(v.NgayKetThuc),
       "Trạng thái": v.TrangThai,
     }));
 
@@ -241,7 +269,7 @@ export default function AdminVoucherPage() {
                 <th className="px-4 py-3 text-right">Mức Giảm</th>
                 <th className="px-4 py-3 text-right">Đơn Tối Thiểu</th>
                 <th className="px-4 py-3 text-center">Đã Dùng / Tổng</th>
-                <th className="px-4 py-3 text-center">Thời Hạn</th>
+                <th className="px-4 py-3 text-center">Thời Gian Áp Dụng</th>
                 <th className="px-4 py-3 text-center">Trạng Thái</th>
                 <th className="px-4 py-3 text-right">Thao Tác</th>
               </tr>
@@ -263,6 +291,28 @@ export default function AdminVoucherPage() {
                 vouchers.map((v) => {
                   const isUsed = (v._count?.DonHangs || 0) > 0;
                   const isDisabled = v.TrangThai === "Disabled";
+                  
+                  let statusLabel = "Hoạt động";
+                  let statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                  
+                  if (isDisabled) {
+                    statusLabel = "Vô hiệu hóa";
+                    statusColor = "bg-red-50 text-red-600 border-red-200";
+                  } else {
+                    const now = new Date();
+                    const start = new Date(v.NgayBatDau);
+                    const end = new Date(v.NgayKetThuc);
+                    
+                    if (now < start) {
+                      statusLabel = "Sắp diễn ra";
+                      statusColor = "bg-blue-50 text-blue-600 border-blue-200";
+                    } else if (now > end) {
+                      statusLabel = "Đã kết thúc";
+                      statusColor = "bg-gray-50 text-gray-600 border-gray-200";
+                    } else {
+                      statusLabel = "Đang hoạt động";
+                    }
+                  }
 
                   return (
                     <tr key={v.MaVoucher} className="hover:bg-gray-50/60 transition-colors">
@@ -301,18 +351,21 @@ export default function AdminVoucherPage() {
                       <td className="px-4 py-3 text-center font-bold text-gray-800">
                         <span className="text-[#f66315]">{v._count?.DonHangs || 0}</span> / {v.TongSoLuong}
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-500">
-                        {new Date(v.NgayKetThuc).toLocaleDateString("vi-VN")}
+                      <td className="px-4 py-3 text-center text-gray-600">
+                        <div className="flex flex-col items-center gap-0.5 text-[11px] leading-tight">
+                          <span className="text-gray-600">
+                            <span className="font-semibold text-gray-400">Từ:</span> {formatDisplayDateTime(v.NgayBatDau)}
+                          </span>
+                          <span className="text-gray-600">
+                            <span className="font-semibold text-gray-400">Đến:</span> {formatDisplayDateTime(v.NgayKetThuc)}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                            isDisabled
-                              ? "bg-red-50 text-red-600 border border-red-200"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          }`}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${statusColor}`}
                         >
-                          {isDisabled ? "Vô hiệu hóa" : "Hoạt động"}
+                          {statusLabel}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -445,27 +498,46 @@ export default function AdminVoucherPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="mb-1 block font-bold text-gray-700">Tổng số lượng phát hành</label>
+                <input
+                  type="number"
+                  value={formData.tongSoLuong}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tongSoLuong: Number(e.target.value) })
+                  }
+                  className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315]"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">Tổng số lượng</label>
+                  <label className="mb-1 block font-bold text-gray-700 flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5 text-[#f66315]" />
+                    Bắt đầu (Ngày & Giờ)
+                  </label>
                   <input
-                    type="number"
-                    value={formData.tongSoLuong}
+                    type="datetime-local"
+                    disabled={isLockedPrice}
+                    value={formData.ngayBatDau}
                     onChange={(e) =>
-                      setFormData({ ...formData, tongSoLuong: Number(e.target.value) })
+                      setFormData({ ...formData, ngayBatDau: e.target.value })
                     }
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315]"
+                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315] disabled:bg-gray-100 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">Ngày kết thúc</label>
+                  <label className="mb-1 block font-bold text-gray-700 flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                    Kết thúc (Ngày & Giờ)
+                  </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.ngayKetThuc}
                     onChange={(e) =>
                       setFormData({ ...formData, ngayKetThuc: e.target.value })
                     }
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315]"
+                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315] text-xs"
                   />
                 </div>
               </div>
