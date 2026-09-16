@@ -65,8 +65,66 @@ export default function AdminVoucherPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<VoucherItem | null>(null);
   const [isLockedPrice, setIsLockedPrice] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState({
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const validateForm = () => {
+    const errs: Record<string, string> = {};
+
+    if (!formData.maVoucher?.trim()) {
+      errs.maVoucher = "Vui lòng nhập mã voucher";
+    }
+
+    if (formData.giaTriGiam === "" || Number(formData.giaTriGiam) <= 0) {
+      errs.giaTriGiam = "Vui lòng nhập mức giảm (> 0)";
+    }
+
+    if (formData.donHangToiThieu === "" || Number(formData.donHangToiThieu) < 0) {
+      errs.donHangToiThieu = "Vui lòng nhập đơn tối thiểu";
+    }
+
+    if (formData.mucGiamToiDa === "" || Number(formData.mucGiamToiDa) < 0) {
+      errs.mucGiamToiDa = "Vui lòng nhập mức giảm tối đa";
+    }
+
+    if (formData.tongSoLuong === "" || Number(formData.tongSoLuong) <= 0) {
+      errs.tongSoLuong = "Vui lòng nhập tổng số lượng phát hành (> 0)";
+    }
+
+    if (!formData.ngayBatDau) {
+      errs.ngayBatDau = "Vui lòng chọn thời gian bắt đầu";
+    }
+
+    if (!formData.ngayKetThuc) {
+      errs.ngayKetThuc = "Vui lòng chọn thời gian kết thúc";
+    } else if (formData.ngayBatDau && new Date(formData.ngayKetThuc) <= new Date(formData.ngayBatDau)) {
+      errs.ngayKetThuc = "Thời gian kết thúc phải sau thời gian bắt đầu";
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const [formData, setFormData] = useState<{
+    maVoucher: string;
+    loaiGiamGia: string;
+    giaTriGiam: number | string;
+    donHangToiThieu: number | string;
+    mucGiamToiDa: number | string;
+    tongSoLuong: number | string;
+    gioiHanSuDung: number;
+    ngayBatDau: string;
+    ngayKetThuc: string;
+    trangThai: string;
+  }>({
     maVoucher: "",
     loaiGiamGia: "TIEN",
     giaTriGiam: 50000,
@@ -104,6 +162,7 @@ export default function AdminVoucherPage() {
   const handleOpenCreate = () => {
     setEditingVoucher(null);
     setIsLockedPrice(false);
+    setErrors({});
     const now = new Date();
     const future = new Date(Date.now() + 30 * 24 * 3600 * 1000);
     setFormData({
@@ -125,6 +184,7 @@ export default function AdminVoucherPage() {
     setEditingVoucher(v);
     const used = (v._count?.DonHangs || 0) > 0;
     setIsLockedPrice(used);
+    setErrors({});
 
     setFormData({
       maVoucher: v.MaVoucher,
@@ -143,6 +203,11 @@ export default function AdminVoucherPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) {
+      toast.error("Vui lòng điền đầy đủ và kiểm tra các trường báo đỏ!");
+      return;
+    }
+
     try {
       const method = editingVoucher ? "PUT" : "POST";
       const res = await fetch("/api/admin/voucher", {
@@ -435,14 +500,35 @@ export default function AdminVoucherPage() {
 
             <form onSubmit={handleSave} className="space-y-3.5 text-xs">
               <div>
-                <label className="mb-1 block font-bold text-gray-700">Mã Voucher</label>
+                <label className="mb-1 block font-bold text-gray-700">
+                  Mã Voucher <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   disabled={!!editingVoucher}
+                  placeholder="Ví dụ: FBSHOP50K"
                   value={formData.maVoucher}
-                  onChange={(e) => setFormData({ ...formData, maVoucher: e.target.value.toUpperCase() })}
-                  className="w-full rounded-xl border border-gray-200 p-2.5 font-mono uppercase outline-none disabled:bg-gray-100"
+                  onBlur={() => {
+                    if (!formData.maVoucher?.trim()) {
+                      setErrors((prev) => ({ ...prev, maVoucher: "Vui lòng nhập mã voucher" }));
+                    }
+                  }}
+                  onChange={(e) => {
+                    setFormData({ ...formData, maVoucher: e.target.value.toUpperCase() });
+                    clearError("maVoucher");
+                  }}
+                  className={`w-full rounded-xl border p-2.5 font-mono uppercase outline-none transition-all disabled:bg-gray-100 ${
+                    errors.maVoucher
+                      ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                      : "border-gray-200 focus:border-[#f66315]"
+                  }`}
                 />
+                {errors.maVoucher && (
+                  <p className="mt-1 text-[11px] font-semibold text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    {errors.maVoucher}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -460,88 +546,205 @@ export default function AdminVoucherPage() {
                 </div>
                 <div>
                   <label className="mb-1 block font-bold text-gray-700">
-                    {formData.loaiGiamGia === "PHANTRAM" ? "Phần trăm giảm (%)" : "Số tiền giảm (VNĐ)"}
+                    {formData.loaiGiamGia === "PHANTRAM" ? "Phần trăm giảm (%)" : "Số tiền giảm (VNĐ)"}{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     disabled={isLockedPrice}
                     value={formData.giaTriGiam}
-                    onChange={(e) =>
-                      setFormData({ ...formData, giaTriGiam: Number(e.target.value) })
-                    }
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none disabled:bg-gray-100"
+                    onBlur={() => {
+                      if (formData.giaTriGiam === "" || Number(formData.giaTriGiam) <= 0) {
+                        setErrors((prev) => ({ ...prev, giaTriGiam: "Vui lòng nhập mức giảm (> 0)" }));
+                      }
+                    }}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        giaTriGiam: e.target.value === "" ? "" : Number(e.target.value),
+                      });
+                      clearError("giaTriGiam");
+                    }}
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-gray-100 ${
+                      errors.giaTriGiam
+                        ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                        : "border-gray-200 focus:border-[#f66315]"
+                    }`}
                   />
+                  {errors.giaTriGiam && (
+                    <p className="mt-1 text-[11px] font-semibold text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      {errors.giaTriGiam}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">Đơn tối thiểu (VNĐ)</label>
+                  <label className="mb-1 block font-bold text-gray-700">
+                    Đơn tối thiểu (VNĐ) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     disabled={isLockedPrice}
                     value={formData.donHangToiThieu}
-                    onChange={(e) =>
-                      setFormData({ ...formData, donHangToiThieu: Number(e.target.value) })
-                    }
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none disabled:bg-gray-100"
+                    onBlur={() => {
+                      if (formData.donHangToiThieu === "" || Number(formData.donHangToiThieu) < 0) {
+                        setErrors((prev) => ({ ...prev, donHangToiThieu: "Vui lòng nhập đơn tối thiểu" }));
+                      }
+                    }}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        donHangToiThieu: e.target.value === "" ? "" : Number(e.target.value),
+                      });
+                      clearError("donHangToiThieu");
+                    }}
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-gray-100 ${
+                      errors.donHangToiThieu
+                        ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                        : "border-gray-200 focus:border-[#f66315]"
+                    }`}
                   />
+                  {errors.donHangToiThieu && (
+                    <p className="mt-1 text-[11px] font-semibold text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      {errors.donHangToiThieu}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">Giảm tối đa (VNĐ)</label>
+                  <label className="mb-1 block font-bold text-gray-700">
+                    Giảm tối đa (VNĐ) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     disabled={isLockedPrice}
                     value={formData.mucGiamToiDa}
-                    onChange={(e) =>
-                      setFormData({ ...formData, mucGiamToiDa: Number(e.target.value) })
-                    }
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none disabled:bg-gray-100"
+                    onBlur={() => {
+                      if (formData.mucGiamToiDa === "" || Number(formData.mucGiamToiDa) < 0) {
+                        setErrors((prev) => ({ ...prev, mucGiamToiDa: "Vui lòng nhập mức giảm tối đa" }));
+                      }
+                    }}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        mucGiamToiDa: e.target.value === "" ? "" : Number(e.target.value),
+                      });
+                      clearError("mucGiamToiDa");
+                    }}
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-gray-100 ${
+                      errors.mucGiamToiDa
+                        ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                        : "border-gray-200 focus:border-[#f66315]"
+                    }`}
                   />
+                  {errors.mucGiamToiDa && (
+                    <p className="mt-1 text-[11px] font-semibold text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      {errors.mucGiamToiDa}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block font-bold text-gray-700">Tổng số lượng phát hành</label>
+                <label className="mb-1 block font-bold text-gray-700">
+                  Tổng số lượng phát hành <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="number"
                   value={formData.tongSoLuong}
-                  onChange={(e) =>
-                    setFormData({ ...formData, tongSoLuong: Number(e.target.value) })
-                  }
-                  className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315]"
+                  onBlur={() => {
+                    if (formData.tongSoLuong === "" || Number(formData.tongSoLuong) <= 0) {
+                      setErrors((prev) => ({ ...prev, tongSoLuong: "Vui lòng nhập tổng số lượng (> 0)" }));
+                    }
+                  }}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      tongSoLuong: e.target.value === "" ? "" : Number(e.target.value),
+                    });
+                    clearError("tongSoLuong");
+                  }}
+                  className={`w-full rounded-xl border p-2.5 outline-none transition-all ${
+                    errors.tongSoLuong
+                      ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                      : "border-gray-200 focus:border-[#f66315]"
+                  }`}
                 />
+                {errors.tongSoLuong && (
+                  <p className="mt-1 text-[11px] font-semibold text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    {errors.tongSoLuong}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block font-bold text-gray-700 flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5 text-[#f66315]" />
-                    Bắt đầu (Ngày & Giờ)
+                    Bắt đầu (Ngày & Giờ) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     disabled={isLockedPrice}
                     value={formData.ngayBatDau}
-                    onChange={(e) =>
-                      setFormData({ ...formData, ngayBatDau: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315] disabled:bg-gray-100 text-xs"
+                    onBlur={() => {
+                      if (!formData.ngayBatDau) {
+                        setErrors((prev) => ({ ...prev, ngayBatDau: "Vui lòng chọn thời gian bắt đầu" }));
+                      }
+                    }}
+                    onChange={(e) => {
+                      setFormData({ ...formData, ngayBatDau: e.target.value });
+                      clearError("ngayBatDau");
+                    }}
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-gray-100 text-xs ${
+                      errors.ngayBatDau
+                        ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                        : "border-gray-200 focus:border-[#f66315]"
+                    }`}
                   />
+                  {errors.ngayBatDau && (
+                    <p className="mt-1 text-[11px] font-semibold text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      {errors.ngayBatDau}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block font-bold text-gray-700 flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                    Kết thúc (Ngày & Giờ)
+                    Kết thúc (Ngày & Giờ) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.ngayKetThuc}
-                    onChange={(e) =>
-                      setFormData({ ...formData, ngayKetThuc: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315] text-xs"
+                    onBlur={() => {
+                      if (!formData.ngayKetThuc) {
+                        setErrors((prev) => ({ ...prev, ngayKetThuc: "Vui lòng chọn thời gian kết thúc" }));
+                      } else if (formData.ngayBatDau && new Date(formData.ngayKetThuc) <= new Date(formData.ngayBatDau)) {
+                        setErrors((prev) => ({ ...prev, ngayKetThuc: "Thời gian kết thúc phải sau bắt đầu" }));
+                      }
+                    }}
+                    onChange={(e) => {
+                      setFormData({ ...formData, ngayKetThuc: e.target.value });
+                      clearError("ngayKetThuc");
+                    }}
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all text-xs ${
+                      errors.ngayKetThuc
+                        ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                        : "border-gray-200 focus:border-[#f66315]"
+                    }`}
                   />
+                  {errors.ngayKetThuc && (
+                    <p className="mt-1 text-[11px] font-semibold text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      {errors.ngayKetThuc}
+                    </p>
+                  )}
                 </div>
               </div>
 
