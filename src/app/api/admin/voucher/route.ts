@@ -55,6 +55,25 @@ export async function POST(request: Request) {
       );
     }
 
+    const numGiaTri = Number(giaTriGiam);
+    const numDonHangToiThieu = Number(donHangToiThieu) || 0;
+    const numMucGiamToiDa = Number(mucGiamToiDa) || 0;
+    const numTongSoLuong = Number(tongSoLuong) || 100;
+
+    if (numGiaTri <= 0 || numDonHangToiThieu < 0 || numMucGiamToiDa < 0 || numTongSoLuong <= 0) {
+      return NextResponse.json(
+        { error: "Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0" },
+        { status: 400 }
+      );
+    }
+
+    if (loaiGiamGia.toUpperCase() === "PHANTRAM" && numGiaTri > 100) {
+      return NextResponse.json(
+        { error: "Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%" },
+        { status: 400 }
+      );
+    }
+
     const start = new Date(ngayBatDau);
     const end = new Date(ngayKetThuc);
     const currentMinute = new Date();
@@ -85,13 +104,13 @@ export async function POST(request: Request) {
       data: {
         MaVoucher: maVoucher.trim().toUpperCase(),
         LoaiGiamGia: loaiGiamGia,
-        GiaTriGiam: Number(giaTriGiam),
-        DonHangToiThieu: Number(donHangToiThieu) || 0,
-        MucGiamToiDa: Number(mucGiamToiDa) || 0,
-        TongSoLuong: Number(tongSoLuong) || 100,
+        GiaTriGiam: numGiaTri,
+        DonHangToiThieu: numDonHangToiThieu,
+        MucGiamToiDa: numMucGiamToiDa,
+        TongSoLuong: numTongSoLuong,
         GioiHanSuDung: Number(gioiHanSuDung) || 1,
-        NgayBatDau: new Date(ngayBatDau),
-        NgayKetThuc: new Date(ngayKetThuc),
+        NgayBatDau: start,
+        NgayKetThuc: end,
         TrangThai: "Active",
       },
     });
@@ -125,6 +144,41 @@ export async function PUT(request: Request) {
 
     if (!maVoucher) {
       return NextResponse.json({ error: "Thiếu mã voucher" }, { status: 400 });
+    }
+
+    if (giaTriGiam !== undefined && Number(giaTriGiam) <= 0) {
+      return NextResponse.json(
+        { error: "Định dạng dữ liệu không hợp lệ: Mức giảm phải lớn hơn 0" },
+        { status: 400 }
+      );
+    }
+
+    if (loaiGiamGia === "PHANTRAM" && giaTriGiam !== undefined && Number(giaTriGiam) > 100) {
+      return NextResponse.json(
+        { error: "Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%" },
+        { status: 400 }
+      );
+    }
+
+    if (donHangToiThieu !== undefined && Number(donHangToiThieu) < 0) {
+      return NextResponse.json(
+        { error: "Định dạng dữ liệu không hợp lệ: Đơn tối thiểu không được là số âm" },
+        { status: 400 }
+      );
+    }
+
+    if (mucGiamToiDa !== undefined && Number(mucGiamToiDa) < 0) {
+      return NextResponse.json(
+        { error: "Định dạng dữ liệu không hợp lệ: Mức giảm tối đa không được là số âm" },
+        { status: 400 }
+      );
+    }
+
+    if (tongSoLuong !== undefined && Number(tongSoLuong) <= 0) {
+      return NextResponse.json(
+        { error: "Định dạng dữ liệu không hợp lệ: Tổng số lượng phải lớn hơn 0" },
+        { status: 400 }
+      );
     }
 
     // Kiem tra so luot da su dung trong DonHang

@@ -83,20 +83,34 @@ export default function AdminVoucherPage() {
       errs.maVoucher = "Vui lòng nhập mã voucher";
     }
 
-    if (formData.giaTriGiam === "" || Number(formData.giaTriGiam) <= 0) {
-      errs.giaTriGiam = "Vui lòng nhập mức giảm (> 0)";
+    if (formData.giaTriGiam === "") {
+      errs.giaTriGiam = "Vui lòng nhập mức giảm";
+    } else if (Number(formData.giaTriGiam) < 0) {
+      errs.giaTriGiam = "Định dạng dữ liệu không hợp lệ: Không được nhập số âm";
+    } else if (Number(formData.giaTriGiam) === 0) {
+      errs.giaTriGiam = "Mức giảm phải lớn hơn 0";
+    } else if (formData.loaiGiamGia === "PHANTRAM" && Number(formData.giaTriGiam) > 100) {
+      errs.giaTriGiam = "Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%";
     }
 
-    if (formData.donHangToiThieu === "" || Number(formData.donHangToiThieu) < 0) {
+    if (formData.donHangToiThieu === "") {
       errs.donHangToiThieu = "Vui lòng nhập đơn tối thiểu";
+    } else if (Number(formData.donHangToiThieu) < 0) {
+      errs.donHangToiThieu = "Định dạng dữ liệu không hợp lệ: Không được nhập số âm";
     }
 
-    if (formData.mucGiamToiDa === "" || Number(formData.mucGiamToiDa) < 0) {
+    if (formData.mucGiamToiDa === "") {
       errs.mucGiamToiDa = "Vui lòng nhập mức giảm tối đa";
+    } else if (Number(formData.mucGiamToiDa) < 0) {
+      errs.mucGiamToiDa = "Định dạng dữ liệu không hợp lệ: Không được nhập số âm";
     }
 
-    if (formData.tongSoLuong === "" || Number(formData.tongSoLuong) <= 0) {
-      errs.tongSoLuong = "Vui lòng nhập tổng số lượng phát hành (> 0)";
+    if (formData.tongSoLuong === "") {
+      errs.tongSoLuong = "Vui lòng nhập tổng số lượng phát hành";
+    } else if (Number(formData.tongSoLuong) < 0) {
+      errs.tongSoLuong = "Định dạng dữ liệu không hợp lệ: Không được nhập số âm";
+    } else if (Number(formData.tongSoLuong) === 0) {
+      errs.tongSoLuong = "Tổng số lượng phát hành phải lớn hơn 0";
     }
 
     const currentMinute = new Date();
@@ -545,7 +559,18 @@ export default function AdminVoucherPage() {
                   <select
                     disabled={isLockedPrice}
                     value={formData.loaiGiamGia}
-                    onChange={(e) => setFormData({ ...formData, loaiGiamGia: e.target.value })}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      setFormData({ ...formData, loaiGiamGia: newType });
+                      if (newType === "PHANTRAM" && Number(formData.giaTriGiam) > 100) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          giaTriGiam: "Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%",
+                        }));
+                      } else {
+                        clearError("giaTriGiam");
+                      }
+                    }}
                     className="w-full rounded-xl border border-gray-200 p-2.5 outline-none disabled:bg-gray-100"
                   >
                     <option value="TIEN">Giảm tiền mặt (VNĐ)</option>
@@ -562,8 +587,20 @@ export default function AdminVoucherPage() {
                     disabled={isLockedPrice}
                     value={formData.giaTriGiam}
                     onBlur={() => {
-                      if (formData.giaTriGiam === "" || Number(formData.giaTriGiam) <= 0) {
-                        setErrors((prev) => ({ ...prev, giaTriGiam: "Vui lòng nhập mức giảm (> 0)" }));
+                      if (formData.giaTriGiam === "") {
+                        setErrors((prev) => ({ ...prev, giaTriGiam: "Vui lòng nhập mức giảm" }));
+                      } else if (Number(formData.giaTriGiam) < 0) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          giaTriGiam: "Định dạng dữ liệu không hợp lệ: Không được nhập số âm",
+                        }));
+                      } else if (Number(formData.giaTriGiam) === 0) {
+                        setErrors((prev) => ({ ...prev, giaTriGiam: "Mức giảm phải lớn hơn 0" }));
+                      } else if (formData.loaiGiamGia === "PHANTRAM" && Number(formData.giaTriGiam) > 100) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          giaTriGiam: "Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%",
+                        }));
                       }
                     }}
                     onChange={(e) => {
@@ -598,8 +635,13 @@ export default function AdminVoucherPage() {
                     disabled={isLockedPrice}
                     value={formData.donHangToiThieu}
                     onBlur={() => {
-                      if (formData.donHangToiThieu === "" || Number(formData.donHangToiThieu) < 0) {
+                      if (formData.donHangToiThieu === "") {
                         setErrors((prev) => ({ ...prev, donHangToiThieu: "Vui lòng nhập đơn tối thiểu" }));
+                      } else if (Number(formData.donHangToiThieu) < 0) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          donHangToiThieu: "Định dạng dữ liệu không hợp lệ: Không được nhập số âm",
+                        }));
                       }
                     }}
                     onChange={(e) => {
@@ -631,8 +673,13 @@ export default function AdminVoucherPage() {
                     disabled={isLockedPrice}
                     value={formData.mucGiamToiDa}
                     onBlur={() => {
-                      if (formData.mucGiamToiDa === "" || Number(formData.mucGiamToiDa) < 0) {
+                      if (formData.mucGiamToiDa === "") {
                         setErrors((prev) => ({ ...prev, mucGiamToiDa: "Vui lòng nhập mức giảm tối đa" }));
+                      } else if (Number(formData.mucGiamToiDa) < 0) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          mucGiamToiDa: "Định dạng dữ liệu không hợp lệ: Không được nhập số âm",
+                        }));
                       }
                     }}
                     onChange={(e) => {
@@ -665,8 +712,18 @@ export default function AdminVoucherPage() {
                   type="number"
                   value={formData.tongSoLuong}
                   onBlur={() => {
-                    if (formData.tongSoLuong === "" || Number(formData.tongSoLuong) <= 0) {
-                      setErrors((prev) => ({ ...prev, tongSoLuong: "Vui lòng nhập tổng số lượng (> 0)" }));
+                    if (formData.tongSoLuong === "") {
+                      setErrors((prev) => ({ ...prev, tongSoLuong: "Vui lòng nhập tổng số lượng phát hành" }));
+                    } else if (Number(formData.tongSoLuong) < 0) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        tongSoLuong: "Định dạng dữ liệu không hợp lệ: Không được nhập số âm",
+                      }));
+                    } else if (Number(formData.tongSoLuong) === 0) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        tongSoLuong: "Tổng số lượng phát hành phải lớn hơn 0",
+                      }));
                     }
                   }}
                   onChange={(e) => {
