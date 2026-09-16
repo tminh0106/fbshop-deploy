@@ -99,8 +99,16 @@ export default function AdminVoucherPage() {
       errs.tongSoLuong = "Vui lòng nhập tổng số lượng phát hành (> 0)";
     }
 
+    const currentMinute = new Date();
+    currentMinute.setSeconds(0, 0);
+    const isNewOrChangingStart =
+      !editingVoucher ||
+      (editingVoucher && formatForDateTimeInput(editingVoucher.NgayBatDau) !== formData.ngayBatDau);
+
     if (!formData.ngayBatDau) {
       errs.ngayBatDau = "Vui lòng chọn thời gian bắt đầu";
+    } else if (isNewOrChangingStart && new Date(formData.ngayBatDau).getTime() < currentMinute.getTime()) {
+      errs.ngayBatDau = "Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại";
     }
 
     if (!formData.ngayKetThuc) {
@@ -693,8 +701,16 @@ export default function AdminVoucherPage() {
                     disabled={isLockedPrice}
                     value={formData.ngayBatDau}
                     onBlur={() => {
+                      const currentMinute = new Date();
+                      currentMinute.setSeconds(0, 0);
+                      const isNewOrChangingStart =
+                        !editingVoucher ||
+                        (editingVoucher && formatForDateTimeInput(editingVoucher.NgayBatDau) !== formData.ngayBatDau);
+
                       if (!formData.ngayBatDau) {
                         setErrors((prev) => ({ ...prev, ngayBatDau: "Vui lòng chọn thời gian bắt đầu" }));
+                      } else if (isNewOrChangingStart && new Date(formData.ngayBatDau).getTime() < currentMinute.getTime()) {
+                        setErrors((prev) => ({ ...prev, ngayBatDau: "Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại" }));
                       }
                     }}
                     onChange={(e) => {

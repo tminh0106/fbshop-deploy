@@ -55,6 +55,25 @@ export async function POST(request: Request) {
       );
     }
 
+    const start = new Date(ngayBatDau);
+    const end = new Date(ngayKetThuc);
+    const currentMinute = new Date();
+    currentMinute.setSeconds(0, 0);
+
+    if (start.getTime() < currentMinute.getTime()) {
+      return NextResponse.json(
+        { error: "Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại" },
+        { status: 400 }
+      );
+    }
+
+    if (end <= start) {
+      return NextResponse.json(
+        { error: "Thời gian kết thúc phải sau thời gian bắt đầu" },
+        { status: 400 }
+      );
+    }
+
     const existing = await prisma.voucher.findUnique({
       where: { MaVoucher: maVoucher.trim().toUpperCase() },
     });
