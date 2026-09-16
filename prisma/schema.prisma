@@ -1,0 +1,182 @@
+// =======================================================
+// PRISMA SCHEMA - HE THONG FBSHOP (12 Bang chuan hoa)
+// Theo tai lieu Bao cao Do an muc 3.3.2
+// =======================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// 1. KhachHang
+model KhachHang {
+  MaKH        String   @id @default(cuid())
+  HoTen       String   @db.NVarChar(100)
+  SoDienThoai String   @unique @db.VarChar(15)
+  Email       String?  @db.VarChar(100)
+  DiaChi      String?  @db.NVarChar(255)
+  MatKhau     String   @db.VarChar(255)
+  DonHangs    DonHang[]
+  @@map("KhachHang")
+}
+
+// 2. NhanVien
+model NhanVien {
+  MaNV        String   @id @default(cuid())
+  HoTen       String   @db.NVarChar(100)
+  SoDienThoai String   @db.VarChar(15)
+  DiaChi      String?  @db.NVarChar(255)
+  LuongCoBan  Decimal  @db.Decimal(15, 0)
+  PhuCap      Decimal  @default(0) @db.Decimal(15, 0)
+  TrangThai   String   @default("Active") @db.NVarChar(50)
+  TaiKhoans   TaiKhoan[]
+  HoaDonKhos  HoaDonKho[]
+  @@map("NhanVien")
+}
+
+// 3. TaiKhoan
+model TaiKhoan {
+  MaTK        String   @id @default(cuid())
+  TenDangNhap String   @unique @db.VarChar(100)
+  MatKhau     String   @db.VarChar(255)
+  PhanQuyen   String   @db.NVarChar(50)
+  TrangThai   String   @default("Active") @db.NVarChar(50)
+  MaNV        String?
+  NhanVien    NhanVien? @relation(fields: [MaNV], references: [MaNV])
+  @@map("TaiKhoan")
+}
+
+// 4. NhaCungCap
+model NhaCungCap {
+  MaNCC       String   @id @default(cuid())
+  TenNCC      String   @db.NVarChar(150)
+  SoDienThoai String   @db.VarChar(15)
+  DiaChi      String?  @db.NVarChar(255)
+  Email       String?  @db.VarChar(100)
+  MaSoThue    String?  @db.VarChar(20)
+  NguoiDaiDien String? @db.NVarChar(100)
+  GhiChu      String?  @db.NVarChar(500)
+  TrangThai   String   @default("Active") @db.NVarChar(50)
+  HoaDonKhos  HoaDonKho[]
+  @@map("NhaCungCap")
+}
+
+// 5. Voucher
+model Voucher {
+  MaVoucher       String   @id @db.VarChar(50)
+  LoaiGiamGia     String   @db.NVarChar(30)
+  GiaTriGiam      Decimal  @db.Decimal(15, 2)
+  DonHangToiThieu Decimal  @default(0) @db.Decimal(15, 0)
+  MucGiamToiDa    Decimal  @default(0) @db.Decimal(15, 0)
+  TongSoLuong     Int      @default(0)
+  GioiHanSuDung   Int      @default(1)
+  NgayBatDau      DateTime
+  NgayKetThuc     DateTime
+  TrangThai       String   @default("Active") @db.NVarChar(50)
+  DonHangs        DonHang[]
+  @@map("Voucher")
+}
+
+// 6. DanhMuc
+model DanhMuc {
+  MaDanhMuc   String   @id @db.VarChar(50)
+  TenDanhMuc  String   @db.NVarChar(100)
+  SanPhams    SanPham[]
+  @@map("DanhMuc")
+}
+
+// 7. SanPham
+model SanPham {
+  MaSP        String   @id @db.VarChar(50)
+  TenSP       String   @db.NVarChar(200)
+  GiaBan      Decimal  @db.Decimal(15, 0)
+  SoLuong     Int      @default(0)
+  TrongLuong  String?  @db.VarChar(10)
+  HinhAnh     String?  @db.NVarChar(500)
+  MoTa        String?  @db.NVarChar(Max)
+  MaDanhMuc   String   @db.VarChar(50)
+  DanhMuc     DanhMuc  @relation(fields: [MaDanhMuc], references: [MaDanhMuc])
+  ChiTietDonHangs     ChiTietDonHang[]
+  ChiTietHoaDonKhos   ChiTietHoaDonKho[]
+  HangHoaKhos         HangHoaKho[]
+  @@map("SanPham")
+}
+
+// 8. DonHang
+model DonHang {
+  MaDH                String   @id @default(cuid()) @db.NVarChar(255)
+  NgayTao             DateTime @default(now())
+  TrangThai           String   @default("Pending") @db.NVarChar(50)
+  TongTien            Decimal  @default(0) @db.Decimal(15, 0)
+  TenNguoiNhan        String   @db.NVarChar(100)
+  SdtNguoiNhan        String   @db.VarChar(15)
+  DiaChiNhan          String   @db.NVarChar(255)
+  PhuongThucThanhToan String   @default("COD") @db.NVarChar(50)
+  GhiChu              String?  @db.NVarChar(500)
+  MaKH                String
+  KhachHang           KhachHang @relation(fields: [MaKH], references: [MaKH])
+  MaVoucher           String?  @db.VarChar(50)
+  Voucher             Voucher? @relation(fields: [MaVoucher], references: [MaVoucher])
+  ChiTietDonHangs     ChiTietDonHang[]
+  @@map("DonHang")
+}
+
+// 9. ChiTietDonHang
+model ChiTietDonHang {
+  MaDH      String   @db.NVarChar(255)
+  MaSP      String   @db.VarChar(50)
+  SoLuong   Int
+  DonGia    Decimal  @db.Decimal(15, 0)
+  ThanhTien Decimal  @db.Decimal(15, 0)
+  DonHang   DonHang  @relation(fields: [MaDH], references: [MaDH])
+  SanPham   SanPham  @relation(fields: [MaSP], references: [MaSP])
+  @@id([MaDH, MaSP])
+  @@map("ChiTietDonHang")
+}
+
+// 10. HangHoaKho
+model HangHoaKho {
+  MaHangHoa   String   @id @default(cuid())
+  ViTriKho    String?  @db.NVarChar(100)
+  SoLuong     Int      @default(0)
+  DonGiaNhap  Decimal  @db.Decimal(15, 0)
+  NgayNhap    DateTime @default(now())
+  HanSuDung   DateTime?
+  GhiChu      String?  @db.NVarChar(500)
+  MaSP        String   @db.VarChar(50)
+  SanPham     SanPham  @relation(fields: [MaSP], references: [MaSP])
+  @@map("HangHoaKho")
+}
+
+// 11. HoaDonKho
+model HoaDonKho {
+  MaHDK       String   @id @default(cuid()) @db.NVarChar(255)
+  NgayLap     DateTime @default(now())
+  LoaiPhieu   String   @db.NVarChar(30)
+  LyDo        String?  @db.NVarChar(500)
+  TongTien    Decimal  @default(0) @db.Decimal(15, 0)
+  TrangThai   String   @default("Completed") @db.NVarChar(50)
+  MaNV        String
+  NhanVien    NhanVien @relation(fields: [MaNV], references: [MaNV])
+  MaNCC       String?
+  NhaCungCap  NhaCungCap? @relation(fields: [MaNCC], references: [MaNCC])
+  ChiTietHoaDonKhos ChiTietHoaDonKho[]
+  @@map("HoaDonKho")
+}
+
+// 12. ChiTietHoaDonKho
+model ChiTietHoaDonKho {
+  MaHDK     String   @db.NVarChar(255)
+  MaSP      String   @db.VarChar(50)
+  SoLuong   Int
+  DonGia    Decimal  @db.Decimal(15, 0)
+  ThanhTien Decimal  @db.Decimal(15, 0)
+  HoaDonKho HoaDonKho @relation(fields: [MaHDK], references: [MaHDK])
+  SanPham   SanPham   @relation(fields: [MaSP], references: [MaSP])
+  @@id([MaHDK, MaSP])
+  @@map("ChiTietHoaDonKho")
+}
