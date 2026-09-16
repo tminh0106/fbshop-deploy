@@ -155,7 +155,10 @@ export default function AdminVoucherPage() {
       if (!res.ok) {
         toast.error(data.error || "Không thể lưu voucher");
       } else {
-        toast.success(data.message || "Lưu voucher thành công");
+        const message = editingVoucher
+          ? (data.message || "Cập nhật voucher thành công")
+          : (data.message || "Tạo voucher thành công");
+        toast.success(message);
         setShowModal(false);
         fetchVouchers();
       }

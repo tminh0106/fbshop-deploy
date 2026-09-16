@@ -77,7 +77,11 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, data: newVoucher });
+    return NextResponse.json({
+      success: true,
+      message: "Tạo voucher thành công",
+      data: newVoucher,
+    });
   } catch (error: any) {
     console.error("POST voucher error:", error);
     return NextResponse.json({ error: "Lỗi tạo voucher mới" }, { status: 500 });
