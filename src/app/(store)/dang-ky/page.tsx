@@ -94,16 +94,13 @@ function RegisterForm() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-200px)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-gray-100 bg-white p-8 shadow-xl">
+    <div className="flex min-h-[calc(100vh-200px)] items-center justify-center bg-gradient-to-b from-slate-50 to-white px-4 py-16">
+      <div className="w-full max-w-lg rounded-3xl border border-slate-200/70 bg-white p-8 shadow-lift sm:p-10">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-[#f66315] shadow-xs">
             <UserPlus className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Đăng ký tài khoản</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Tạo tài khoản thành viên để nhận ngay ưu đãi từ FBShop
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Đăng ký tài khoản</h1>
         </div>
 
         {generalError && (
@@ -114,20 +111,20 @@ function RegisterForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
               Họ và tên <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Ví dụ: Nguyễn Văn A"
                 value={hoTen}
                 onChange={(e) => setHoTen(e.target.value)}
-                className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
+                className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
                   errors.hoTen
                     ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                    : "border-gray-200 focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                    : "border-slate-200 focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"
                 }`}
               />
             </div>
@@ -136,20 +133,20 @@ function RegisterForm() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Số điện thoại <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="tel"
                   placeholder="0912345678"
                   value={soDienThoai}
                   onChange={(e) => setSoDienThoai(e.target.value)}
-                  className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
+                  className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
                     errors.soDienThoai
                       ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                      : "border-gray-200 focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                      : "border-slate-200 focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"
                   }`}
                 />
               </div>
@@ -159,20 +156,20 @@ function RegisterForm() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Email (tùy chọn)
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="email"
                   placeholder="name@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
+                  className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
                     errors.email
                       ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                      : "border-gray-200 focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                      : "border-slate-200 focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"
                   }`}
                 />
               </div>
@@ -181,37 +178,37 @@ function RegisterForm() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
               Địa chỉ nhận hàng (tùy chọn)
             </label>
             <div className="relative">
-              <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+              <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
               <textarea
                 rows={2}
                 placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..."
                 value={diaChi}
                 onChange={(e) => setDiaChi(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 h-11 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"
               />
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Mật khẩu <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="password"
                   placeholder="Tối thiểu 6 ký tự"
                   value={matKhau}
                   onChange={(e) => setMatKhau(e.target.value)}
-                  className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
+                  className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
                     errors.matKhau
                       ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                      : "border-gray-200 focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                      : "border-slate-200 focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"
                   }`}
                 />
               </div>
@@ -219,20 +216,20 @@ function RegisterForm() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Xác nhận mật khẩu <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="password"
                   placeholder="Nhập lại mật khẩu"
                   value={xacNhanMatKhau}
                   onChange={(e) => setXacNhanMatKhau(e.target.value)}
-                  className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
+                  className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
                     errors.xacNhanMatKhau
                       ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                      : "border-gray-200 focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                      : "border-slate-200 focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"
                   }`}
                 />
               </div>
@@ -245,18 +242,18 @@ function RegisterForm() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#f66315] py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-orange-700 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#f66315] py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-[#d4520f] disabled:opacity-50"
           >
             {loading ? "Đang xử lý..." : "Đăng ký tài khoản"}
             {!loading && <ArrowRight className="h-4 w-4" />}
           </button>
         </form>
 
-        <div className="mt-6 border-t border-gray-100 pt-6 text-center text-sm text-gray-600">
+        <div className="mt-6 border-t border-slate-100 pt-6 text-center text-sm text-slate-600">
           Đã có tài khoản?{" "}
           <Link
             href={`/dang-nhap${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
-            className="font-bold text-[#f66315] transition-colors hover:text-orange-700"
+            className="font-bold text-[#f66315] transition-colors hover:text-[#d4520f]"
           >
             Đăng nhập ngay
           </Link>
@@ -268,7 +265,7 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-gray-400">Đang tải form đăng ký...</div>}>
+    <Suspense fallback={<div className="p-12 text-center text-slate-400">Đang tải form đăng ký...</div>}>
       <RegisterForm />
     </Suspense>
   );

@@ -14,6 +14,16 @@ import prisma from "../src/lib/db";
 
 const BASE_URL = "http://localhost:3000";
 
+// API thong ke chi danh cho Admin -> dang nhap de lay cookie
+async function loginAdminCookie(): Promise<string> {
+  const res = await fetch(`${BASE_URL}/api/admin/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tenDangNhap: "admin@gmail.com", matKhau: "123456" }),
+  });
+  return (res.headers.get("set-cookie") || "").match(/fbshop_admin_token=[^;]+/)?.[0] || "";
+}
+
 function printBanner(text: string) {
   console.log("\n" + "=".repeat(85));
   console.log(text);
@@ -31,7 +41,9 @@ async function runE2E() {
 
   // Lấy doanh thu ban đầu từ API thống kê
   try {
-    const statsResInit = await fetch(`${BASE_URL}/api/admin/thong-ke`);
+    const statsResInit = await fetch(`${BASE_URL}/api/admin/thong-ke`, {
+      headers: { Cookie: await loginAdminCookie() },
+    });
     const statsDataInit = await statsResInit.json();
     initialRevenue = statsDataInit.data?.summary?.totalRevenue || 0;
     console.log(`[*] Doanh thu hệ thống trước khi đặt hàng: ${initialRevenue.toLocaleString("vi-VN")} đ`);
@@ -138,7 +150,7 @@ async function runE2E() {
   const adminLoginRes = await fetch(`${BASE_URL}/api/admin/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tenDangNhap: "admin", matKhau: "123456" }),
+    body: JSON.stringify({ tenDangNhap: "admin@gmail.com", matKhau: "123456" }),
   });
   const adminSetCookie = adminLoginRes.headers.get("set-cookie") || "";
   const adminTokenMatch = adminSetCookie.match(/fbshop_admin_token=([^;]+)/);
@@ -180,7 +192,7 @@ async function runE2E() {
   // BƯỚC 5: KIỂM TRA BÁO CÁO TÀI CHÍNH & TỔNG DOANH THU CỘNG DỒN
   // -------------------------------------------------------------------------
   console.log("\n>>> BƯỚC 5: Kiểm tra báo cáo tài chính (/admin/thong-ke)");
-  const statsRes = await fetch(`${BASE_URL}/api/admin/thong-ke`);
+  const statsRes = await fetch(`${BASE_URL}/api/admin/thong-ke`, { headers: { Cookie: adminCookie } });
   const statsData = await statsRes.json();
   const finalRevenue = statsData.data?.summary?.totalRevenue || 0;
   const revenueDiff = finalRevenue - initialRevenue;

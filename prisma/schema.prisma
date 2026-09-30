@@ -1,6 +1,7 @@
 // =======================================================
 // PRISMA SCHEMA - HE THONG FBSHOP (12 Bang chuan hoa)
 // Theo tai lieu Bao cao Do an muc 3.3.2
+// CSDL: MySQL dung chung (utf8mb4 - luu day du tieng Viet)
 // =======================================================
 
 generator client {
@@ -8,17 +9,17 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlserver"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 // 1. KhachHang
 model KhachHang {
   MaKH        String   @id @default(cuid())
-  HoTen       String   @db.NVarChar(100)
+  HoTen       String   @db.VarChar(100)
   SoDienThoai String   @unique @db.VarChar(15)
   Email       String?  @db.VarChar(100)
-  DiaChi      String?  @db.NVarChar(255)
+  DiaChi      String?  @db.VarChar(255)
   MatKhau     String   @db.VarChar(255)
   DonHangs    DonHang[]
   @@map("KhachHang")
@@ -27,12 +28,12 @@ model KhachHang {
 // 2. NhanVien
 model NhanVien {
   MaNV        String   @id @default(cuid())
-  HoTen       String   @db.NVarChar(100)
+  HoTen       String   @db.VarChar(100)
   SoDienThoai String   @db.VarChar(15)
-  DiaChi      String?  @db.NVarChar(255)
+  DiaChi      String?  @db.VarChar(255)
   LuongCoBan  Decimal  @db.Decimal(15, 0)
   PhuCap      Decimal  @default(0) @db.Decimal(15, 0)
-  TrangThai   String   @default("Active") @db.NVarChar(50)
+  TrangThai   String   @default("Active") @db.VarChar(50)
   TaiKhoans   TaiKhoan[]
   HoaDonKhos  HoaDonKho[]
   @@map("NhanVien")
@@ -43,8 +44,8 @@ model TaiKhoan {
   MaTK        String   @id @default(cuid())
   TenDangNhap String   @unique @db.VarChar(100)
   MatKhau     String   @db.VarChar(255)
-  PhanQuyen   String   @db.NVarChar(50)
-  TrangThai   String   @default("Active") @db.NVarChar(50)
+  PhanQuyen   String   @db.VarChar(50)
+  TrangThai   String   @default("Active") @db.VarChar(50)
   MaNV        String?
   NhanVien    NhanVien? @relation(fields: [MaNV], references: [MaNV])
   @@map("TaiKhoan")
@@ -53,14 +54,14 @@ model TaiKhoan {
 // 4. NhaCungCap
 model NhaCungCap {
   MaNCC       String   @id @default(cuid())
-  TenNCC      String   @db.NVarChar(150)
+  TenNCC      String   @db.VarChar(150)
   SoDienThoai String   @db.VarChar(15)
-  DiaChi      String?  @db.NVarChar(255)
+  DiaChi      String?  @db.VarChar(255)
   Email       String?  @db.VarChar(100)
   MaSoThue    String?  @db.VarChar(20)
-  NguoiDaiDien String? @db.NVarChar(100)
-  GhiChu      String?  @db.NVarChar(500)
-  TrangThai   String   @default("Active") @db.NVarChar(50)
+  NguoiDaiDien String? @db.VarChar(100)
+  GhiChu      String?  @db.VarChar(500)
+  TrangThai   String   @default("Active") @db.VarChar(50)
   HoaDonKhos  HoaDonKho[]
   @@map("NhaCungCap")
 }
@@ -68,7 +69,7 @@ model NhaCungCap {
 // 5. Voucher
 model Voucher {
   MaVoucher       String   @id @db.VarChar(50)
-  LoaiGiamGia     String   @db.NVarChar(30)
+  LoaiGiamGia     String   @db.VarChar(30)
   GiaTriGiam      Decimal  @db.Decimal(15, 2)
   DonHangToiThieu Decimal  @default(0) @db.Decimal(15, 0)
   MucGiamToiDa    Decimal  @default(0) @db.Decimal(15, 0)
@@ -76,7 +77,7 @@ model Voucher {
   GioiHanSuDung   Int      @default(1)
   NgayBatDau      DateTime
   NgayKetThuc     DateTime
-  TrangThai       String   @default("Active") @db.NVarChar(50)
+  TrangThai       String   @default("Active") @db.VarChar(50)
   DonHangs        DonHang[]
   @@map("Voucher")
 }
@@ -84,7 +85,7 @@ model Voucher {
 // 6. DanhMuc
 model DanhMuc {
   MaDanhMuc   String   @id @db.VarChar(50)
-  TenDanhMuc  String   @db.NVarChar(100)
+  TenDanhMuc  String   @db.VarChar(100)
   SanPhams    SanPham[]
   @@map("DanhMuc")
 }
@@ -92,12 +93,12 @@ model DanhMuc {
 // 7. SanPham
 model SanPham {
   MaSP        String   @id @db.VarChar(50)
-  TenSP       String   @db.NVarChar(200)
+  TenSP       String   @db.VarChar(200)
   GiaBan      Decimal  @db.Decimal(15, 0)
   SoLuong     Int      @default(0)
   TrongLuong  String?  @db.VarChar(10)
-  HinhAnh     String?  @db.NVarChar(500)
-  MoTa        String?  @db.NVarChar(Max)
+  HinhAnh     String?  @db.MediumText // duong dan anh hoac anh nen dang data URL (webp)
+  MoTa        String?  @db.Text
   MaDanhMuc   String   @db.VarChar(50)
   DanhMuc     DanhMuc  @relation(fields: [MaDanhMuc], references: [MaDanhMuc])
   ChiTietDonHangs     ChiTietDonHang[]
@@ -108,15 +109,15 @@ model SanPham {
 
 // 8. DonHang
 model DonHang {
-  MaDH                String   @id @default(cuid()) @db.NVarChar(255)
+  MaDH                String   @id @default(cuid()) @db.VarChar(255)
   NgayTao             DateTime @default(now())
-  TrangThai           String   @default("Pending") @db.NVarChar(50)
+  TrangThai           String   @default("Pending") @db.VarChar(50)
   TongTien            Decimal  @default(0) @db.Decimal(15, 0)
-  TenNguoiNhan        String   @db.NVarChar(100)
+  TenNguoiNhan        String   @db.VarChar(100)
   SdtNguoiNhan        String   @db.VarChar(15)
-  DiaChiNhan          String   @db.NVarChar(255)
-  PhuongThucThanhToan String   @default("COD") @db.NVarChar(50)
-  GhiChu              String?  @db.NVarChar(500)
+  DiaChiNhan          String   @db.VarChar(255)
+  PhuongThucThanhToan String   @default("COD") @db.VarChar(50)
+  GhiChu              String?  @db.VarChar(500)
   MaKH                String
   KhachHang           KhachHang @relation(fields: [MaKH], references: [MaKH])
   MaVoucher           String?  @db.VarChar(50)
@@ -127,7 +128,7 @@ model DonHang {
 
 // 9. ChiTietDonHang
 model ChiTietDonHang {
-  MaDH      String   @db.NVarChar(255)
+  MaDH      String   @db.VarChar(255)
   MaSP      String   @db.VarChar(50)
   SoLuong   Int
   DonGia    Decimal  @db.Decimal(15, 0)
@@ -141,12 +142,12 @@ model ChiTietDonHang {
 // 10. HangHoaKho
 model HangHoaKho {
   MaHangHoa   String   @id @default(cuid())
-  ViTriKho    String?  @db.NVarChar(100)
+  ViTriKho    String?  @db.VarChar(100)
   SoLuong     Int      @default(0)
   DonGiaNhap  Decimal  @db.Decimal(15, 0)
   NgayNhap    DateTime @default(now())
   HanSuDung   DateTime?
-  GhiChu      String?  @db.NVarChar(500)
+  GhiChu      String?  @db.VarChar(500)
   MaSP        String   @db.VarChar(50)
   SanPham     SanPham  @relation(fields: [MaSP], references: [MaSP])
   @@map("HangHoaKho")
@@ -154,12 +155,12 @@ model HangHoaKho {
 
 // 11. HoaDonKho
 model HoaDonKho {
-  MaHDK       String   @id @default(cuid()) @db.NVarChar(255)
+  MaHDK       String   @id @default(cuid()) @db.VarChar(255)
   NgayLap     DateTime @default(now())
-  LoaiPhieu   String   @db.NVarChar(30)
-  LyDo        String?  @db.NVarChar(500)
+  LoaiPhieu   String   @db.VarChar(30)
+  LyDo        String?  @db.VarChar(500)
   TongTien    Decimal  @default(0) @db.Decimal(15, 0)
-  TrangThai   String   @default("Completed") @db.NVarChar(50)
+  TrangThai   String   @default("Completed") @db.VarChar(50)
   MaNV        String
   NhanVien    NhanVien @relation(fields: [MaNV], references: [MaNV])
   MaNCC       String?
@@ -170,7 +171,7 @@ model HoaDonKho {
 
 // 12. ChiTietHoaDonKho
 model ChiTietHoaDonKho {
-  MaHDK     String   @db.NVarChar(255)
+  MaHDK     String   @db.VarChar(255)
   MaSP      String   @db.VarChar(50)
   SoLuong   Int
   DonGia    Decimal  @db.Decimal(15, 0)

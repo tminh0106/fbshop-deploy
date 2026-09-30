@@ -2,6 +2,18 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getCurrentCustomer } from "@/lib/auth";
 
+// Phuong thuc thanh toan trang dat hang gui len (COD / chuyen khoan QR)
+const PAYMENT_METHODS = ["COD", "BANKING"];
+const MAX_QTY_PER_ITEM = 999;
+const STOPPED_TAG = "[NGỪNG KINH DOANH]";
+
+// Het hang giua luc kiem tra va luc tru ton (nhieu khach dat cung luc)
+class OutOfStockError extends Error {
+  constructor(public productName: string) {
+    super("OUT_OF_STOCK");
+  }
+}
+
 // ==========================================
 // GET /api/don-hang: Lay lich su don hang cua khach
 // ==========================================
@@ -107,15 +119,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Giỏ hàng không có sản phẩm nào" }, { status: 400 });
     }
 
+    if (!PAYMENT_METHODS.includes(phuongThucThanhToan)) {
+      return NextResponse.json({ error: "Phương thức thanh toán không hợp lệ" }, { status: 400 });
+    }
+
+    // Gop cac dong trung san pham (tranh loi trung khoa chinh ChiTietDonHang) + so luong phai la so nguyen duong
+    const mergedItems = new Map<string, number>();
+    for (const item of items) {
+      const qty = Number(item?.soLuong);
+      if (!item?.maSP || !Number.isInteger(qty) || qty <= 0 || qty > MAX_QTY_PER_ITEM) {
+        return NextResponse.json({ error: "Thông tin sản phẩm trong giỏ không hợp lệ" }, { status: 400 });
+      }
+      mergedItems.set(item.maSP, (mergedItems.get(item.maSP) || 0) + qty);
+    }
+
     // BUOC 3: Kiem tra ton kho & lay gia goc tu DB
     const verifiedItems: { maSP: string; soLuong: number; donGia: number; tenSP: string }[] = [];
     let tongTienHang = 0;
 
-    for (const item of items) {
-      if (!item.maSP || !item.soLuong || item.soLuong <= 0) {
-        return NextResponse.json({ error: "Thông tin sản phẩm trong giỏ không hợp lệ" }, { status: 400 });
-      }
-
+    for (const [maSP, soLuong] of mergedItems) {
+      const item = { maSP, soLuong };
       const product = await prisma.sanPham.findUnique({
         where: { MaSP: item.maSP },
       });
@@ -123,6 +146,14 @@ export async function POST(request: Request) {
       if (!product) {
         return NextResponse.json(
           { error: `Sản phẩm ${item.maSP} không tồn tại` },
+          { status: 400 }
+        );
+      }
+
+      // San pham da ngung kinh doanh (xoa mem) thi khong ban nua
+      if (product.MoTa?.includes(STOPPED_TAG)) {
+        return NextResponse.json(
+          { error: `Sản phẩm "${product.TenSP}" đã ngừng kinh doanh` },
           { status: 400 }
         );
       }
@@ -232,14 +263,12 @@ export async function POST(request: Request) {
           },
         });
 
-        await tx.sanPham.update({
-          where: { MaSP: item.maSP },
-          data: {
-            SoLuong: {
-              decrement: item.soLuong,
-            },
-          },
+        // Tru ton co dieu kien: chi tru khi van du hang (tranh ban am kho khi nhieu khach dat cung luc)
+        const deducted = await tx.sanPham.updateMany({
+          where: { MaSP: item.maSP, SoLuong: { gte: item.soLuong } },
+          data: { SoLuong: { decrement: item.soLuong } },
         });
+        if (deducted.count === 0) throw new OutOfStockError(item.tenSP);
       }
 
       // c) Giam luot dung voucher neu co
@@ -268,6 +297,12 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
+    if (error instanceof OutOfStockError) {
+      return NextResponse.json(
+        { error: `Sản phẩm "${error.productName}" vừa hết hàng hoặc không đủ số lượng. Vui lòng kiểm tra lại giỏ hàng.` },
+        { status: 409 }
+      );
+    }
     console.error("POST /api/don-hang error:", error);
     return NextResponse.json(
       { error: "Đã xảy ra lỗi khi tạo đơn hàng. Vui lòng thử lại!" },

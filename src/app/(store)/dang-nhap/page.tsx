@@ -62,16 +62,13 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-200px)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-8 shadow-xl">
+    <div className="flex min-h-[calc(100vh-200px)] items-center justify-center bg-gradient-to-b from-slate-50 to-white px-4 py-16">
+      <div className="w-full max-w-md rounded-3xl border border-slate-200/70 bg-white p-8 shadow-lift sm:p-10">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-[#f66315] shadow-xs">
             <LogIn className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Đăng nhập tài khoản</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Trải nghiệm mua sắm vợt & phụ kiện cầu lông tại FBShop
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Đăng nhập tài khoản</h1>
         </div>
 
         {generalError && (
@@ -82,11 +79,11 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
               Số điện thoại
             </label>
             <div className="relative">
-              <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="tel"
                 placeholder="Ví dụ: 0912345678"
@@ -96,10 +93,10 @@ function LoginForm() {
                   setPhoneError("");
                   setGeneralError("");
                 }}
-                className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
+                className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
                   phoneError
                     ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                    : "border-gray-200 focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                    : "border-slate-200 focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"
                 }`}
               />
             </div>
@@ -107,11 +104,11 @@ function LoginForm() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
               Mật khẩu
             </label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="password"
                 placeholder="Nhập mật khẩu..."
@@ -121,10 +118,10 @@ function LoginForm() {
                   setPasswordError("");
                   setGeneralError("");
                 }}
-                className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
+                className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
                   passwordError
                     ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                    : "border-gray-200 focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                    : "border-slate-200 focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"
                 }`}
               />
             </div>
@@ -134,26 +131,26 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#f66315] py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-orange-700 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#f66315] py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-[#d4520f] disabled:opacity-50"
           >
             {loading ? "Đang kiểm tra..." : "Đăng nhập"}
             {!loading && <ArrowRight className="h-4 w-4" />}
           </button>
         </form>
 
-        <div className="mt-6 border-t border-gray-100 pt-6 text-center text-sm text-gray-600 space-y-2.5">
+        <div className="mt-6 border-t border-slate-100 pt-6 text-center text-sm text-slate-600 space-y-2.5">
           <div>
             Chưa có tài khoản?{" "}
             <Link
               href={`/dang-ky${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
-              className="font-bold text-[#f66315] transition-colors hover:text-orange-700"
+              className="font-bold text-[#f66315] transition-colors hover:text-[#d4520f]"
             >
               Đăng ký ngay
             </Link>
           </div>
-          <div className="text-xs text-gray-500 pt-2 border-t border-dashed border-gray-100">
+          <div className="text-xs text-slate-500 pt-2 border-t border-dashed border-slate-100">
             Dành cho Nhân viên & Quản trị:{" "}
-            <Link href="/admin/login" className="font-semibold text-gray-800 hover:text-[#f66315] underline">
+            <Link href="/admin/login" className="font-semibold text-slate-800 hover:text-[#f66315] underline">
               Đăng nhập Cổng Quản Trị
             </Link>
           </div>
@@ -165,7 +162,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-gray-400">Đang tải form đăng nhập...</div>}>
+    <Suspense fallback={<div className="p-12 text-center text-slate-400">Đang tải form đăng nhập...</div>}>
       <LoginForm />
     </Suspense>
   );

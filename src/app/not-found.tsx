@@ -1,40 +1,38 @@
 import Link from "next/link";
-import { AlertCircle, Home, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { BrandMark } from "@/components/layout/BrandLogo";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="relative mb-6">
-        <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-orange-50 text-[#f66315] shadow-xl shadow-orange-100/50">
-          <span className="text-5xl font-black">404</span>
-        </div>
-        <div className="absolute -bottom-2 -right-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f66315] text-white shadow-md">
-          <span className="text-xl">🏸</span>
-        </div>
-      </div>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-white px-4 py-16 text-center">
+      <span className="pointer-events-none absolute select-none font-display text-[38vw] font-bold leading-none text-slate-100 sm:text-[22rem]">
+        404
+      </span>
 
-      <h1 className="text-2xl font-black text-gray-900 md:text-3xl">
-        Rất tiếc! Trang bạn đang tìm kiếm không tồn tại
-      </h1>
-      <p className="mt-2 max-w-md text-sm text-gray-500">
-        Đường dẫn có thể đã bị thay đổi, xóa hoặc tạm thời không khả dụng. Hãy quay về trang chủ để tiếp tục mua sắm dụng cụ cầu lông chính hãng.
-      </p>
+      <div className="relative">
+        <BrandMark className="mx-auto h-14 w-14" />
+        <h1 className="mt-8 text-3xl font-bold text-slate-900 md:text-4xl">Trang không tồn tại</h1>
+        <p className="mx-auto mt-3 max-w-md text-slate-500">
+          Đường dẫn có thể đã bị thay đổi hoặc tạm thời không khả dụng. Hãy quay về trang chủ để
+          tiếp tục mua sắm dụng cụ cầu lông chính hãng.
+        </p>
 
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href="/"
-          className="flex items-center gap-2 rounded-xl bg-[#f66315] px-6 py-3 text-xs font-bold text-white shadow-lg shadow-orange-950/20 transition-all hover:bg-[#e55000] hover:scale-105"
-        >
-          <Home className="h-4 w-4" />
-          Quay lại trang chủ
-        </Link>
-        <Link
-          href="/san-pham"
-          className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-        >
-          <ShoppingBag className="h-4 w-4 text-[#f66315]" />
-          Xem tất cả sản phẩm
-        </Link>
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/"
+            className="flex h-11 items-center gap-2 rounded-full bg-ink px-6 text-sm font-semibold text-white transition-all hover:bg-[#f66315] hover:shadow-brand"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Về trang chủ
+          </Link>
+          <Link
+            href="/san-pham"
+            className="flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+          >
+            <ShoppingBag className="h-4 w-4 text-[#f66315]" />
+            Xem sản phẩm
+          </Link>
+        </div>
       </div>
     </div>
   );

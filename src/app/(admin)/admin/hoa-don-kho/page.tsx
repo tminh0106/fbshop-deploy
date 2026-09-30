@@ -47,6 +47,7 @@ interface SanPhamOption {
 interface NCCOption {
   MaNCC: string;
   TenNCC: string;
+  TrangThai?: string;
 }
 
 export default function HoaDonKhoPage() {
@@ -179,7 +180,27 @@ export default function HoaDonKhoPage() {
       return;
     }
     if (createType === "NHAP" && !selectedNCC) {
-      toast.error("Vui lòng chọn Nhà cung cấp");
+      toast.error("Vui lòng chọn nhà cung cấp");
+      return;
+    }
+    if (createType === "XUAT" && !createLyDo.trim()) {
+      toast.error("Vui lòng chọn/nhập lý do xuất kho");
+      return;
+    }
+    const invalidRow = createItems.some((it) => {
+      const qty = Number(it.soLuong);
+      const price = Number(it.donGia);
+      return (
+        !it.maSP ||
+        !Number.isInteger(qty) ||
+        qty <= 0 ||
+        !Number.isInteger(price) ||
+        price < 0 ||
+        (createType === "NHAP" && price <= 0)
+      );
+    });
+    if (invalidRow) {
+      toast.error("Dữ liệu không hợp lệ: số lượng phải là số nguyên > 0, đơn giá nhập phải > 0");
       return;
     }
 
@@ -250,6 +271,10 @@ export default function HoaDonKhoPage() {
 
   // Xuat Excel (Bảng 3.21)
   const handleExportExcel = () => {
+    if (invoices.length === 0) {
+      toast.error("Không có dữ liệu để xuất file");
+      return;
+    }
     const dataToExport = invoices.map((inv) => ({
       "Mã HĐ": inv.MaHDK,
       "Ngày lập": new Date(inv.NgayLap).toLocaleString("vi-VN"),
@@ -261,8 +286,12 @@ export default function HoaDonKhoPage() {
       "Lý do": inv.LyDo || "",
     }));
 
-    exportToExcel(dataToExport, "HoaDonKho_FBShop", "HoaDonKho");
-    toast.success("Đã xuất danh sách Hóa đơn kho ra Excel!");
+    try {
+      exportToExcel(dataToExport, "HoaDonKho_FBShop", "HoaDonKho");
+      toast.success("Đã xuất danh sách hóa đơn kho ra Excel!");
+    } catch {
+      toast.error("Đã xảy ra lỗi trong quá trình tạo file, vui lòng thử lại sau");
+    }
   };
 
   const totalTongTienCreate = createItems.reduce(
@@ -275,13 +304,10 @@ export default function HoaDonKhoPage() {
       {/* Header Bar */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <FileText className="h-6 w-6 text-[#f66315]" />
             QUẢN LÝ HÓA ĐƠN KHO (NHẬP / XUẤT KHO)
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Quy chuẩn kho vận tự động hóa, hoàn nguyên tồn kho theo đúng BR-01
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -301,25 +327,25 @@ export default function HoaDonKhoPage() {
           </button>
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
           >
-            <Download className="h-4 w-4 text-gray-500" />
+            <Download className="h-4 w-4 text-slate-500" />
             Xuất Excel
           </button>
         </div>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
         <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Tìm theo mã HĐ, lý do, người lập..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 py-2 pl-9 pr-3 text-xs outline-none focus:border-[#f66315]"
+              className="w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-xs outline-none focus:border-[#f66315]"
             />
           </div>
 
@@ -327,7 +353,7 @@ export default function HoaDonKhoPage() {
             <select
               value={loaiPhieu}
               onChange={(e) => setLoaiPhieu(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
+              className="w-full rounded-xl border border-slate-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
             >
               <option value="ALL">-- Tất cả loại phiếu --</option>
               <option value="NHAP">Phiếu Nhập (NHAP)</option>
@@ -340,7 +366,7 @@ export default function HoaDonKhoPage() {
               type="date"
               value={tuNgay}
               onChange={(e) => setTuNgay(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
+              className="w-full rounded-xl border border-slate-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
               title="Từ ngày"
             />
           </div>
@@ -350,7 +376,7 @@ export default function HoaDonKhoPage() {
               type="date"
               value={denNgay}
               onChange={(e) => setDenNgay(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
+              className="w-full rounded-xl border border-slate-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
               title="Đến ngày"
             />
           </div>
@@ -358,10 +384,10 @@ export default function HoaDonKhoPage() {
       </div>
 
       {/* Data Table */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-gray-200 bg-gray-50/80 font-bold text-gray-700 uppercase">
+            <thead className="border-b border-slate-200 bg-slate-50/80 font-bold text-slate-700 uppercase">
               <tr>
                 <th className="px-4 py-3">Mã Hóa Đơn</th>
                 <th className="px-4 py-3">Ngày Lập</th>
@@ -373,16 +399,16 @@ export default function HoaDonKhoPage() {
                 <th className="px-4 py-3 text-right">Thao Tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400 font-medium">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                     Đang tải danh sách hóa đơn kho...
                   </td>
                 </tr>
               ) : invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400 font-medium">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                     Không tìm thấy hóa đơn kho nào phù hợp
                   </td>
                 </tr>
@@ -392,11 +418,11 @@ export default function HoaDonKhoPage() {
                   const isHuy = inv.TrangThai === "Da huy" || inv.TrangThai === "Cancelled";
 
                   return (
-                    <tr key={inv.MaHDK} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-4 py-3 font-mono font-bold text-gray-900">
+                    <tr key={inv.MaHDK} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3 font-mono font-bold text-slate-900">
                         {inv.MaHDK}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className="px-4 py-3 text-slate-600">
                         {new Date(inv.NgayLap).toLocaleString("vi-VN", {
                           day: "2-digit",
                           month: "2-digit",
@@ -421,15 +447,15 @@ export default function HoaDonKhoPage() {
                           {isNhap ? "NHẬP KHO" : "XUẤT KHO"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-800">
+                      <td className="px-4 py-3 font-medium text-slate-800">
                         {inv.NhanVien?.HoTen || "Hệ thống"}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate" title={inv.LyDo || ""}>
+                      <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate" title={inv.LyDo || ""}>
                         {isNhap
                           ? inv.NhaCungCap?.TenNCC || inv.LyDo || "Nhà cung cấp"
                           : inv.LyDo || "Xuất điều phối"}
                       </td>
-                      <td className="px-4 py-3 text-right font-bold text-gray-900">
+                      <td className="px-4 py-3 text-right font-bold text-slate-900">
                         {Number(inv.TongTien).toLocaleString("vi-VN")} đ
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -452,7 +478,7 @@ export default function HoaDonKhoPage() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setViewingInvoice(inv)}
-                            className="rounded-lg border border-gray-200 bg-white p-1.5 text-gray-600 hover:bg-gray-100 hover:text-black transition-all"
+                            className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100 hover:text-black transition-all"
                             title="Xem chi tiết"
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -465,7 +491,7 @@ export default function HoaDonKhoPage() {
                                 setCancelError("");
                               }}
                               className="rounded-lg border border-red-200 bg-red-50/80 p-1.5 text-red-600 hover:bg-red-100 transition-all"
-                              title="Hủy hóa đơn (BR-01)"
+                              title="Hủy hóa đơn"
                             >
                               <AlertTriangle className="h-3.5 w-3.5" />
                             </button>
@@ -484,21 +510,16 @@ export default function HoaDonKhoPage() {
       {/* Modal Lap Phieu Nhap / Xuat Kho */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
               <div>
-                <h3 className="text-base font-black text-gray-900">
+                <h3 className="text-base font-bold text-slate-900">
                   {createType === "NHAP" ? "LẬP PHIẾU NHẬP KHO" : "LẬP PHIẾU XUẤT KHO"}
                 </h3>
-                <p className="text-xs text-gray-500">
-                  {createType === "NHAP"
-                    ? "Tăng tồn kho SanPham và ghi nhận HangHoaKho"
-                    : "Kiểm tra tồn kho và trừ tồn kho trực tiếp"}
-                </p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-xl p-2 text-gray-400 hover:bg-gray-100"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
               >
                 ✕
               </button>
@@ -507,15 +528,17 @@ export default function HoaDonKhoPage() {
             <div className="space-y-4 text-xs">
               {createType === "NHAP" && (
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">
+                  <label className="mb-1 block font-bold text-slate-700">
                     Nhà cung cấp đối tác <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={selectedNCC}
                     onChange={(e) => setSelectedNCC(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315]"
+                    className="w-full rounded-xl border border-slate-200 p-2.5 outline-none focus:border-[#f66315]"
                   >
-                    {suppliers.map((ncc) => (
+                    {suppliers
+                      .filter((ncc) => ncc.TrangThai !== "Ngung hop tac")
+                      .map((ncc) => (
                       <option key={ncc.MaNCC} value={ncc.MaNCC}>
                         {ncc.TenNCC} ({ncc.MaNCC})
                       </option>
@@ -525,7 +548,7 @@ export default function HoaDonKhoPage() {
               )}
 
               <div>
-                <label className="mb-1 block font-bold text-gray-700">
+                <label className="mb-1 block font-bold text-slate-700">
                   Lý do lập phiếu / Ghi chú
                 </label>
                 <input
@@ -533,14 +556,14 @@ export default function HoaDonKhoPage() {
                   value={createLyDo}
                   onChange={(e) => setCreateLyDo(e.target.value)}
                   placeholder="Ví dụ: Nhập hàng đợt 1 tháng 9 hoặc Xuất trả bảo hành"
-                  className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-[#f66315]"
+                  className="w-full rounded-xl border border-slate-200 p-2.5 outline-none focus:border-[#f66315]"
                 />
               </div>
 
               {/* Danh sach mat hang */}
-              <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50/50 space-y-3">
+              <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50/50 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-gray-800 uppercase tracking-wider text-[11px]">
+                  <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
                     Danh sách sản phẩm trong phiếu
                   </h4>
                   <button
@@ -561,14 +584,14 @@ export default function HoaDonKhoPage() {
                   return (
                     <div
                       key={idx}
-                      className="grid grid-cols-12 gap-2 items-center bg-white p-3 rounded-xl border border-gray-200 shadow-2xs"
+                      className="grid grid-cols-12 gap-2 items-center bg-white p-3 rounded-xl border border-slate-200 shadow-2xs"
                     >
                       <div className="col-span-5">
-                        <label className="block text-[10px] text-gray-400 mb-0.5">Sản phẩm</label>
+                        <label className="block text-[10px] text-slate-400 mb-0.5">Sản phẩm</label>
                         <select
                           value={item.maSP}
                           onChange={(e) => handleItemChange(idx, "maSP", e.target.value)}
-                          className="w-full rounded-lg border border-gray-200 p-1.5 text-xs outline-none"
+                          className="w-full rounded-lg border border-slate-200 p-1.5 text-xs outline-none"
                         >
                           {products.map((p) => (
                             <option key={p.MaSP} value={p.MaSP}>
@@ -579,7 +602,7 @@ export default function HoaDonKhoPage() {
                       </div>
 
                       <div className="col-span-3">
-                        <label className="block text-[10px] text-gray-400 mb-0.5">
+                        <label className="block text-[10px] text-slate-400 mb-0.5">
                           Số lượng {createType === "XUAT" && spInfo && `(Tồn: ${spInfo.SoLuong})`}
                         </label>
                         <input
@@ -588,20 +611,20 @@ export default function HoaDonKhoPage() {
                           value={item.soLuong}
                           onChange={(e) => handleItemChange(idx, "soLuong", e.target.value)}
                           className={`w-full rounded-lg border p-1.5 text-xs outline-none ${
-                            isStockWarning ? "border-red-500 bg-red-50 text-red-600" : "border-gray-200"
+                            isStockWarning ? "border-red-500 bg-red-50 text-red-600" : "border-slate-200"
                           }`}
                         />
                       </div>
 
                       <div className="col-span-3">
-                        <label className="block text-[10px] text-gray-400 mb-0.5">
+                        <label className="block text-[10px] text-slate-400 mb-0.5">
                           Đơn giá ({createType === "NHAP" ? "Giá nhập" : "Giá xuất"})
                         </label>
                         <input
                           type="number"
                           value={item.donGia}
                           onChange={(e) => handleItemChange(idx, "donGia", e.target.value)}
-                          className="w-full rounded-lg border border-gray-200 p-1.5 text-xs outline-none"
+                          className="w-full rounded-lg border border-slate-200 p-1.5 text-xs outline-none"
                         />
                       </div>
 
@@ -609,7 +632,7 @@ export default function HoaDonKhoPage() {
                         <button
                           type="button"
                           onClick={() => handleRemoveItemRow(idx)}
-                          className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100"
+                          className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -625,20 +648,20 @@ export default function HoaDonKhoPage() {
                   );
                 })}
 
-                <div className="flex justify-between items-center pt-2 font-bold text-gray-800 text-xs">
+                <div className="flex justify-between items-center pt-2 font-bold text-slate-800 text-xs">
                   <span>Tổng giá trị phiếu:</span>
-                  <span className="text-sm font-black text-[#f66315]">
+                  <span className="text-sm font-bold text-[#f66315]">
                     {totalTongTienCreate.toLocaleString("vi-VN")} đ
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-4">
+            <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-xl border border-gray-300 px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50"
+                className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
               >
                 Hủy bỏ
               </button>
@@ -657,48 +680,48 @@ export default function HoaDonKhoPage() {
       {/* Modal Xem Chi Tiet Hoa Don */}
       {viewingInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl border border-gray-100">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h3 className="text-base font-black text-gray-900">
+                <h3 className="text-base font-bold text-slate-900">
                   CHI TIẾT HÓA ĐƠN KHO: {viewingInvoice.MaHDK}
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   {viewingInvoice.LoaiPhieu === "NHAP" ? "Phiếu Nhập kho" : "Phiếu Xuất kho"} •{" "}
                   {new Date(viewingInvoice.NgayLap).toLocaleString("vi-VN")}
                 </p>
               </div>
               <button
                 onClick={() => setViewingInvoice(null)}
-                className="rounded-xl p-2 text-gray-400 hover:bg-gray-100"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl">
                 <div>
-                  <span className="text-gray-400">Người lập phiếu:</span>
-                  <p className="font-bold text-gray-800">{viewingInvoice.NhanVien?.HoTen}</p>
+                  <span className="text-slate-400">Người lập phiếu:</span>
+                  <p className="font-bold text-slate-800">{viewingInvoice.NhanVien?.HoTen}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Đối tác / NCC:</span>
-                  <p className="font-bold text-gray-800">
+                  <span className="text-slate-400">Đối tác / NCC:</span>
+                  <p className="font-bold text-slate-800">
                     {viewingInvoice.NhaCungCap?.TenNCC || "Nội bộ FBShop"}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-gray-400">Lý do / Diễn giải:</span>
-                  <p className="font-medium text-gray-800">{viewingInvoice.LyDo || "Không có ghi chú"}</p>
+                  <span className="text-slate-400">Lý do / Diễn giải:</span>
+                  <p className="font-medium text-slate-800">{viewingInvoice.LyDo || "Không có ghi chú"}</p>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-bold text-gray-700 mb-2">Danh mục hàng hóa chi tiết:</h4>
-                <div className="border border-gray-100 rounded-xl overflow-hidden">
+                <h4 className="font-bold text-slate-700 mb-2">Danh mục hàng hóa chi tiết:</h4>
+                <div className="border border-slate-100 rounded-xl overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-50 font-bold text-gray-600">
+                    <thead className="bg-slate-50 font-bold text-slate-600">
                       <tr>
                         <th className="p-2.5">Sản phẩm</th>
                         <th className="p-2.5 text-center">Số lượng</th>
@@ -706,7 +729,7 @@ export default function HoaDonKhoPage() {
                         <th className="p-2.5 text-right">Thành tiền</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-slate-100">
                       {viewingInvoice.ChiTietHoaDonKhos?.map((ct, i) => (
                         <tr key={i}>
                           <td className="p-2.5 font-medium">{ct.SanPham?.TenSP || ct.MaSP}</td>
@@ -724,9 +747,9 @@ export default function HoaDonKhoPage() {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center border-t border-gray-100 pt-3">
-                <span className="font-bold text-gray-600">Tổng cộng:</span>
-                <span className="text-base font-black text-gray-900">
+              <div className="flex justify-between items-center border-t border-slate-100 pt-3">
+                <span className="font-bold text-slate-600">Tổng cộng:</span>
+                <span className="text-base font-bold text-slate-900">
                   {Number(viewingInvoice.TongTien).toLocaleString("vi-VN")} VNĐ
                 </span>
               </div>
@@ -738,15 +761,15 @@ export default function HoaDonKhoPage() {
       {/* Modal Huy Hoa Don BR-01 */}
       {cancellingInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-gray-100">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-100">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-600">
               <AlertTriangle className="h-6 w-6" />
             </div>
 
-            <h3 className="text-center text-base font-black text-gray-900">
+            <h3 className="text-center text-base font-bold text-slate-900">
               HỦY HÓA ĐƠN KHO {cancellingInvoice.MaHDK}
             </h3>
-            <p className="mt-1 text-center text-xs text-gray-500">
+            <p className="mt-1 text-center text-xs text-slate-500">
               Quy tắc BR-01: Hệ thống sẽ tự động hoàn nguyên số lượng tồn kho theo đúng lịch sử nhập/xuất.
             </p>
 
@@ -757,7 +780,7 @@ export default function HoaDonKhoPage() {
             )}
 
             <div className="mt-4">
-              <label className="mb-1 block text-xs font-bold text-gray-700">
+              <label className="mb-1 block text-xs font-bold text-slate-700">
                 Lý do hủy hóa đơn <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -768,7 +791,7 @@ export default function HoaDonKhoPage() {
                   setCancelReason(e.target.value);
                   setCancelError("");
                 }}
-                className="w-full rounded-xl border border-gray-200 p-3 text-xs outline-none focus:border-red-500"
+                className="w-full rounded-xl border border-slate-200 p-3 text-xs outline-none focus:border-red-500"
               />
             </div>
 
@@ -776,7 +799,7 @@ export default function HoaDonKhoPage() {
               <button
                 type="button"
                 onClick={() => setCancellingInvoice(null)}
-                className="flex-1 rounded-xl border border-gray-300 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-xl border border-slate-300 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
               >
                 Đóng
               </button>

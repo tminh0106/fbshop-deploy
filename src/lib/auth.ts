@@ -1,23 +1,22 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import prisma from "@/lib/db";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { hasFeature, isStaffRole, normalizeRole, type Feature } from "@/lib/permissions";
+import {
+  generateAdminToken,
+  generateToken,
+  verifyAdminToken,
+  verifyToken,
+  type AdminTokenPayload,
+  type CustomerTokenPayload,
+} from "@/lib/jwt";
 
-const JWT_SECRET = process.env.JWT_SECRET || "fbshop-jwt-secret-key-2026-very-secure";
+export { generateAdminToken, generateToken, verifyAdminToken, verifyToken };
+export type { AdminTokenPayload, CustomerTokenPayload };
 
-export interface CustomerTokenPayload {
-  maKH: string;
-  hoTen: string;
-  sdt: string;
-}
-
-export interface AdminTokenPayload {
-  maTK: string;
-  tenDangNhap: string;
-  hoTen: string;
-  role: string; // "Admin" | "QuanLyKho" | "NhanVien"
-  maNV?: string | null;
-}
+// Trang thai tai khoan bi khoa (khop voi kiem tra o /api/admin/auth/login)
+const LOCKED_STATUSES = ["Khoa", "Locked"];
 
 /**
  * Hash mat khau bang bcryptjs voi saltRounds = 10
@@ -33,43 +32,6 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-/**
- * Tao JWT token thoi han 7 ngay cho khach hang
- */
-export function generateToken(payload: CustomerTokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
-}
-
-/**
- * Tao JWT token thoi han 7 ngay cho admin/staff
- */
-export function generateAdminToken(payload: AdminTokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
-}
-
-/**
- * Verify JWT token, tra ve payload hoac null neu khong hop le
- */
-export function verifyToken(token: string): CustomerTokenPayload | null {
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as CustomerTokenPayload;
-    return decoded;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Verify JWT Admin token
- */
-export function verifyAdminToken(token: string): AdminTokenPayload | null {
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AdminTokenPayload;
-    return decoded;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Lay thong tin khach hang hien tai tu cookie hoac token
@@ -121,7 +83,17 @@ export async function getCurrentAdmin(tokenParam?: string): Promise<AdminTokenPa
     const payload = verifyAdminToken(token);
     if (!payload?.maTK) return null;
 
-    return payload;
+    // Doc lai tai khoan tu CSDL: tai khoan bi khoa/xoa mat quyen ngay,
+    // doi vai tro co hieu luc ngay (khong doi token 7 ngay het han)
+    const taiKhoan = await prisma.taiKhoan.findUnique({
+      where: { MaTK: payload.maTK },
+      select: { PhanQuyen: true, TrangThai: true },
+    });
+    if (!taiKhoan || LOCKED_STATUSES.includes(taiKhoan.TrangThai)) return null;
+
+    // Chi nhan vien noi bo (Admin / NhanVienKho / BanHang); ten vai tro cu duoc chuan hoa
+    if (!isStaffRole(taiKhoan.PhanQuyen)) return null;
+    return { ...payload, role: normalizeRole(taiKhoan.PhanQuyen)! };
   } catch (err) {
     console.error("getCurrentAdmin error:", err);
     return null;
@@ -129,15 +101,26 @@ export async function getCurrentAdmin(tokenParam?: string): Promise<AdminTokenPa
 }
 
 /**
- * Kiem tra quyen cho API Route
+ * Chan API theo ma tran quyen (src/lib/permissions.ts).
+ * Dung: const auth = await requireFeature("kho"); if (!auth.ok) return auth.response;
  */
-export async function requireRoles(allowedRoles: string[]) {
+export async function requireFeature(
+  feature: Feature | Feature[]
+): Promise<{ ok: true; user: AdminTokenPayload } | { ok: false; response: NextResponse }> {
   const admin = await getCurrentAdmin();
   if (!admin) {
-    return { error: "Chưa đăng nhập", status: 401 };
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Chưa đăng nhập hoặc phiên đã hết hạn" }, { status: 401 }),
+    };
   }
-  if (!allowedRoles.includes(admin.role)) {
-    return { error: "Bạn không có quyền thực hiện thao tác này", status: 403 };
+  // Nhan mang = chi can co 1 trong cac quyen (vd: doc danh sach NCC khi lap phieu kho)
+  const features = Array.isArray(feature) ? feature : [feature];
+  if (!features.some((f) => hasFeature(admin.role, f))) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Bạn không có quyền thực hiện thao tác này" }, { status: 403 }),
+    };
   }
-  return { user: admin, status: 200 };
+  return { ok: true, user: admin };
 }

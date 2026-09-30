@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx scripts/run_all_tests.ts",
-    "test:e2e": "tsx scripts/test_e2e_flow.ts"
+    "test:e2e": "tsx scripts/test_e2e_flow.ts",
+    "db:export": "tsx scripts/export_data.ts",
+    "db:import": "tsx scripts/import_data.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

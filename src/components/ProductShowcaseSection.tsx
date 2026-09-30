@@ -21,13 +21,13 @@ export default function ProductShowcaseSection({
   return (
     <section className="container mx-auto my-12 px-4">
       {/* Tieu de & Nut Xem tat ca */}
-      <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
-        <h2 className="text-2xl font-bold uppercase tracking-wide text-gray-800">
+      <div className="mb-6 flex items-center justify-between border-b border-slate-200 pb-4">
+        <h2 className="text-2xl font-bold uppercase tracking-wide text-slate-800">
           {title}
         </h2>
         <Link
           href={categoryLink}
-          className="text-sm font-semibold text-[#f66315] transition-colors hover:text-orange-700"
+          className="text-sm font-semibold text-[#f66315] transition-colors hover:text-[#d4520f]"
         >
           Xem tat ca &rarr;
         </Link>

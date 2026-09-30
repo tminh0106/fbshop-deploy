@@ -35,3 +35,31 @@ export function exportToExcel(
   const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   XLSX.writeFile(workbook, `${fileName}_${timestamp}.xlsx`);
 }
+
+/**
+ * Xuat nhieu bang du lieu thanh nhieu sheet trong cung 1 file Excel.
+ * Sheet rong duoc ghi 1 dong "Không có dữ liệu" thay vi bo qua.
+ */
+export function exportSheetsToExcel(
+  sheets: { name: string; data: Record<string, any>[] }[],
+  fileName: string = "FBShop_Export"
+) {
+  const workbook = XLSX.utils.book_new();
+  for (const sheet of sheets) {
+    const rows = sheet.data.length ? sheet.data : [{ "Ghi chú": "Không có dữ liệu" }];
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet["!cols"] = Object.keys(rows[0]).map((key) => ({
+      wch: Math.max(
+        12,
+        Math.min(
+          44,
+          Math.max(key.length, ...rows.map((r) => (r[key] === undefined ? 0 : String(r[key]).length))) + 3
+        )
+      ),
+    }));
+    // Ten sheet Excel toi da 31 ky tu
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name.slice(0, 31));
+  }
+  const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  XLSX.writeFile(workbook, `${fileName}_${timestamp}.xlsx`);
+}

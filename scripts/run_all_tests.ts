@@ -39,7 +39,7 @@ async function main() {
     const res = await fetch(`${BASE_URL}/api/admin/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tenDangNhap: "admin@fbshop.vn", matKhau: "123456" }),
+      body: JSON.stringify({ tenDangNhap: "admin@gmail.com", matKhau: "123456" }),
     });
     const data = await res.json();
     const passed = res.status === 200 && data.success === true && data.user?.role === "Admin";
@@ -79,7 +79,7 @@ async function main() {
     const res = await fetch(`${BASE_URL}/api/admin/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tenDangNhap: "admin@fbshop.vn", matKhau: "mat_khau_sai_123" }),
+      body: JSON.stringify({ tenDangNhap: "admin@gmail.com", matKhau: "mat_khau_sai_123" }),
     });
     const data = await res.json();
     const passed = res.status === 401 && data.error?.includes("không đúng");
@@ -193,16 +193,25 @@ async function main() {
 
   // TC-LOGIN-09: Khách truy cập trực tiếp URL Admin
   try {
-    // Gui request vao /admin voi cookie khach hang (fbshop_token gia dinh)
+    // Dang nhap that bang tai khoan khach hang, roi vao thang /admin
+    const customerLogin = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ soDienThoai: "0912345678", matKhau: "123456" }),
+    });
+    const customerCookie =
+      (customerLogin.headers.get("set-cookie") || "").match(/fbshop_token=[^;]+/)?.[0] || "";
     const res = await fetch(`${BASE_URL}/admin`, {
-      headers: {
-        Cookie: "fbshop_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtYUtIIjoiMTIzIiwicm9sZSI6IktoYWNoSGFuZyJ9.signature",
-      },
+      headers: { Cookie: customerCookie },
       redirect: "manual",
     });
     const location = res.headers.get("location");
-    // Middleware chuyen huong ve trang chu /
-    const passed = Boolean(res.status === 307 || res.status === 302 || location === "/" || location?.endsWith(":3000/"));
+    // Proxy chuyen huong khach hang ve trang chu /
+    const passed = Boolean(
+      customerCookie &&
+        (res.status === 307 || res.status === 302) &&
+        (location === "/" || location?.endsWith(":3000/"))
+    );
     record(
       "TC-LOGIN-09",
       "Khách truy cập trực tiếp URL Admin",
@@ -453,11 +462,19 @@ async function main() {
   const sp88d = await prisma.sanPham.findUnique({ where: { MaSP: "SP_AX88D" } });
   initStock = sp88d?.SoLuong || 15;
 
+  // Nghiệp vụ kho yêu cầu đăng nhập bằng tài khoản có quyền kho (Quản lý kho)
+  const khoLogin = await fetch(`${BASE_URL}/api/admin/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tenDangNhap: "kho@gmail.com", matKhau: "123456" }),
+  });
+  const khoCookie = (khoLogin.headers.get("set-cookie") || "").match(/fbshop_admin_token=[^;]+/)?.[0] || "";
+
   // TC-KHO-01: Nhập kho tăng tồn
   try {
     const res = await fetch(`${BASE_URL}/api/admin/hoa-don-kho`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({
         loaiPhieu: "NHAP",
         maNCC: "NCC001",
@@ -486,7 +503,7 @@ async function main() {
     const current = (await prisma.sanPham.findUnique({ where: { MaSP: "SP_AX88D" } }))?.SoLuong || 0;
     const res = await fetch(`${BASE_URL}/api/admin/hoa-don-kho`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({
         loaiPhieu: "XUAT",
         lyDo: "Test TC-KHO-02 Xuất kho",
@@ -513,7 +530,7 @@ async function main() {
   try {
     const res = await fetch(`${BASE_URL}/api/admin/hoa-don-kho`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({
         loaiPhieu: "XUAT",
         lyDo: "Test xuất vượt tồn kho",
@@ -538,7 +555,7 @@ async function main() {
     const beforeCancel = (await prisma.sanPham.findUnique({ where: { MaSP: "SP_AX88D" } }))?.SoLuong || 0;
     const res = await fetch(`${BASE_URL}/api/admin/hoa-don-kho/${testHDKXuat}/cancel`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({ lyDoHuy: "Hủy phiếu xuất kiểm thử BR-01" }),
     });
     const data = await res.json();
@@ -560,7 +577,7 @@ async function main() {
     const beforeCancel = (await prisma.sanPham.findUnique({ where: { MaSP: "SP_AX88D" } }))?.SoLuong || 0;
     const res = await fetch(`${BASE_URL}/api/admin/hoa-don-kho/${testHDKNhap}/cancel`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({ lyDoHuy: "Hủy phiếu nhập kiểm thử BR-01 đủ tồn" }),
     });
     const data = await res.json();
@@ -582,7 +599,7 @@ async function main() {
     // Tạo 1 phiếu nhập 10 cây
     const resNhapMoi = await fetch(`${BASE_URL}/api/admin/hoa-don-kho`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({
         loaiPhieu: "NHAP",
         maNCC: "NCC001",
@@ -598,7 +615,7 @@ async function main() {
     // Thử hủy phiếu nhập 10 cây khi chỉ còn 5 cây
     const resCancelFail = await fetch(`${BASE_URL}/api/admin/hoa-don-kho/${hdkMoi}/cancel`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({ lyDoHuy: "Cố tình hủy khi đã bán hết" }),
     });
     const dataFail = await resCancelFail.json();
@@ -606,6 +623,7 @@ async function main() {
 
     // Khôi phục lại tồn
     await prisma.sanPham.update({ where: { MaSP: "SP_AX88D" }, data: { SoLuong: 15 } });
+    await prisma.hangHoaKho.deleteMany({ where: { GhiChu: { startsWith: `[${hdkMoi}]` } } });
     await prisma.chiTietHoaDonKho.deleteMany({ where: { MaHDK: hdkMoi } });
     await prisma.hoaDonKho.delete({ where: { MaHDK: hdkMoi } });
 
@@ -625,7 +643,7 @@ async function main() {
     // Tao phieu test
     const resNhapTest = await fetch(`${BASE_URL}/api/admin/hoa-don-kho`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({
         loaiPhieu: "NHAP",
         maNCC: "NCC001",
@@ -637,7 +655,7 @@ async function main() {
 
     const resNoReason = await fetch(`${BASE_URL}/api/admin/hoa-don-kho/${testHDK}/cancel`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: khoCookie },
       body: JSON.stringify({ lyDoHuy: "" }),
     });
     const dataNoReason = await resNoReason.json();
@@ -646,6 +664,7 @@ async function main() {
     // Dọn dẹp
     await prisma.sanPham.update({ where: { MaSP: "SP_AX88D" }, data: { SoLuong: initStock } });
     if (testHDK) {
+      await prisma.hangHoaKho.deleteMany({ where: { GhiChu: { startsWith: `[${testHDK}]` } } });
       await prisma.chiTietHoaDonKho.deleteMany({ where: { MaHDK: testHDK } });
       await prisma.hoaDonKho.delete({ where: { MaHDK: testHDK } });
     }

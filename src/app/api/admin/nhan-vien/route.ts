@@ -1,285 +1,300 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
-import { hashPassword } from "@/lib/auth";
+import { ROLES } from "@/lib/permissions";
+import { hashPassword, requireFeature } from "@/lib/auth";
 
 // Regex chuan theo dac ta
 const PHONE_REGEX = /^0\d{9}$/;
 const EMAIL_REGEX = /^[a-zA-Z0-9]+([._-][a-zA-Z0-9]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
 
-// GET: Danh sach nhan vien
+// Trang thai lam viec (du lieu cu co ca "Dang lam viec" va "Active" cung nghia)
+const STATUS_ACTIVE = "Active";
+const STATUS_RESIGNED = "Da nghi viec";
+const WORKING_STATUSES = [STATUS_ACTIVE, "Dang lam viec"];
+const ALLOWED_STATUSES = [...WORKING_STATUSES, STATUS_RESIGNED];
+const ACCOUNT_LOCKED = "Khoa";
+
+// Gioi han theo cot CSDL (HoTen VarChar(100), DiaChi VarChar(255), Luong Decimal(15,0))
+const MAX_NAME = 100;
+const MAX_ADDRESS = 255;
+const MAX_MONEY = 999_999_999_999;
+
+const DUPLICATE_ERROR = "Thông tin đã tồn tại";
+
+function bad(error: string, status = 400) {
+  return NextResponse.json({ error }, { status });
+}
+
+// Ma NV tiep theo = so lon nhat hien co + 1 (NV001, NV002...).
+// Khong xoa nhan vien nao thi bang dung so luong + 1; da xoa bot thi van khong trung ma cu.
+async function nextMaNV(db: Prisma.TransactionClient | typeof prisma): Promise<string> {
+  const rows = await db.nhanVien.findMany({ select: { MaNV: true } });
+  const max = rows.reduce((m, r) => {
+    const n = /^NV(\d+)$/i.exec(r.MaNV);
+    return n ? Math.max(m, parseInt(n[1], 10)) : m;
+  }, 0);
+  return `NV${String(max + 1).padStart(3, "0")}`;
+}
+
+// Tien luong / phu cap: so nguyen >= 0
+function parseMoney(value: unknown, label: string): { ok: true; value: number } | { ok: false; error: string } {
+  const n = typeof value === "string" ? Number(value.trim()) : Number(value);
+  if (value === "" || value === null || value === undefined || !Number.isFinite(n)) {
+    return { ok: false, error: `${label} phải là một số hợp lệ` };
+  }
+  if (n < 0) return { ok: false, error: `${label} không được âm` };
+  if (!Number.isInteger(n)) return { ok: false, error: `${label} phải là số nguyên (VNĐ)` };
+  if (n > MAX_MONEY) return { ok: false, error: `${label} vượt quá giới hạn cho phép` };
+  return { ok: true, value: n };
+}
+
+// GET: Danh sach nhan vien (+ ma NV tiep theo de hien tren form them moi)
 export async function GET(request: Request) {
   try {
+    const auth = await requireFeature("nhanVien");
+    if (!auth.ok) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const keyword = searchParams.get("keyword")?.trim();
 
-    const where: any = {};
+    const where: Prisma.NhanVienWhereInput = {};
     if (keyword) {
       where.OR = [
         { MaNV: { contains: keyword } },
         { HoTen: { contains: keyword } },
         { SoDienThoai: { contains: keyword } },
+        // Tim theo email (email la ten dang nhap cua tai khoan lien ket)
+        { TaiKhoans: { some: { TenDangNhap: { contains: keyword } } } },
       ];
     }
 
-    const employees = await prisma.nhanVien.findMany({
-      where,
-      include: {
-        TaiKhoans: {
-          select: { MaTK: true, TenDangNhap: true, PhanQuyen: true, TrangThai: true },
+    const [employees, nextCode] = await Promise.all([
+      prisma.nhanVien.findMany({
+        where,
+        include: {
+          TaiKhoans: {
+            select: { MaTK: true, TenDangNhap: true, PhanQuyen: true, TrangThai: true },
+          },
+          _count: {
+            select: { HoaDonKhos: true },
+          },
         },
-        _count: {
-          select: { HoaDonKhos: true },
-        },
-      },
-      orderBy: { MaNV: "asc" },
-    });
+        orderBy: { MaNV: "asc" },
+      }),
+      nextMaNV(prisma),
+    ]);
 
-    // Bổ sung thuộc tính email từ TaiKhoans (nếu có tài khoản dạng email)
+    // Email = ten dang nhap dang email cua tai khoan lien ket.
+    // Ten dang nhap khong phai email thi KHONG coi la email (tranh form sua bao sai dinh dang).
     const formatted = employees.map((emp) => {
       const emailAcc = emp.TaiKhoans.find((tk) => tk.TenDangNhap.includes("@"));
-      return {
-        ...emp,
-        Email: emailAcc ? emailAcc.TenDangNhap : (emp.TaiKhoans[0]?.TenDangNhap || null),
-      };
+      return { ...emp, Email: emailAcc ? emailAcc.TenDangNhap : null };
     });
 
-    return NextResponse.json({ success: true, data: formatted });
-  } catch (error: any) {
+    return NextResponse.json({ success: true, data: formatted, nextMaNV: nextCode });
+  } catch (error) {
     console.error("GET nhan-vien error:", error);
     return NextResponse.json({ error: "Lỗi tải danh sách nhân viên" }, { status: 500 });
   }
 }
 
-// POST: Them nhan vien (Bao gom rang buoc A2 & Trung lap du lieu doc nhat)
+// POST: Them nhan vien - Bang 3.30 (A1 bo trong, A2 sai dinh dang, A3 trung lap)
+// Ma NV do he thong tu sinh, khong nhan tu client.
 export async function POST(request: Request) {
   try {
+    const auth = await requireFeature("nhanVien");
+    if (!auth.ok) return auth.response;
+
     const body = await request.json();
-    const { maNV, hoTen, soDienThoai, email, diaChi, luongCoBan, phuCap } = body;
+    const { hoTen, soDienThoai, email, diaChi, luongCoBan, phuCap } = body;
 
-    // 1. Kiem tra bat buoc
+    // A1 - Bo trong thong tin bat buoc
     if (!hoTen || typeof hoTen !== "string" || !hoTen.trim()) {
-      return NextResponse.json(
-        { error: "Vui lòng nhập họ tên nhân viên" },
-        { status: 400 }
-      );
+      return bad("Vui lòng nhập họ tên nhân viên");
     }
-
+    if (hoTen.trim().length > MAX_NAME) return bad(`Họ tên tối đa ${MAX_NAME} ký tự`);
     if (!soDienThoai || typeof soDienThoai !== "string" || !soDienThoai.trim()) {
-      return NextResponse.json(
-        { error: "Vui lòng nhập số điện thoại nhân viên" },
-        { status: 400 }
-      );
+      return bad("Vui lòng nhập số điện thoại nhân viên");
     }
 
+    // A2 - Sai dinh dang
     const cleanPhone = soDienThoai.trim();
-
-    // 2. Ngoai le A2 - Du lieu sai dinh dang: So dien thoai
     if (!PHONE_REGEX.test(cleanPhone)) {
-      return NextResponse.json(
-        {
-          error:
-            "Số điện thoại không đúng định dạng. Vui lòng nhập số điện thoại gồm đúng 10 chữ số và bắt đầu bằng số 0.",
-        },
-        { status: 400 }
+      return bad(
+        "Số điện thoại không đúng định dạng. Vui lòng nhập số điện thoại gồm đúng 10 chữ số và bắt đầu bằng số 0."
       );
     }
-
-    // 3. Ngoai le A2 - Du lieu sai dinh dang: Email (neu co nhap)
     let cleanEmail: string | null = null;
     if (email && typeof email === "string" && email.trim()) {
       cleanEmail = email.trim().toLowerCase();
       if (!EMAIL_REGEX.test(cleanEmail)) {
-        return NextResponse.json(
-          {
-            error: "Email không đúng định dạng. Vui lòng kiểm tra lại cấu trúc email (ví dụ: nhanvien@fbshop.vn).",
-          },
-          { status: 400 }
-        );
+        return bad("Email không đúng định dạng. Vui lòng kiểm tra lại cấu trúc email (ví dụ: nhanvien@fbshop.vn).");
       }
     }
+    const cleanAddress = typeof diaChi === "string" ? diaChi.trim() : "";
+    if (cleanAddress.length > MAX_ADDRESS) return bad(`Địa chỉ tối đa ${MAX_ADDRESS} ký tự`);
+    const salary = parseMoney(luongCoBan, "Lương cơ bản");
+    if (!salary.ok) return bad(salary.error);
+    const allowance = parseMoney(phuCap, "Phụ cấp");
+    if (!allowance.ok) return bad(allowance.error);
 
-    // 4. Trung lap du lieu doc nhat: Kiem tra SoDienThoai da ton tai o nhan vien khac chua
-    const existingPhone = await prisma.nhanVien.findFirst({
-      where: { SoDienThoai: cleanPhone },
-    });
-    if (existingPhone) {
-      return NextResponse.json(
-        { error: "Thông tin đã tồn tại" },
-        { status: 409 }
-      );
-    }
-
-    // 5. Trung lap du lieu doc nhat: Kiem tra Email da ton tai o nhan vien khac (trong TaiKhoan) chua
+    // A3 - Trung lap du lieu doc nhat (SDT o nhan vien khac, Email o tai khoan khac)
+    const existingPhone = await prisma.nhanVien.findFirst({ where: { SoDienThoai: cleanPhone } });
+    if (existingPhone) return bad(DUPLICATE_ERROR, 409);
     if (cleanEmail) {
-      const existingEmail = await prisma.taiKhoan.findFirst({
-        where: { TenDangNhap: cleanEmail },
-      });
-      if (existingEmail) {
-        return NextResponse.json(
-          { error: "Thông tin đã tồn tại" },
-          { status: 409 }
-        );
-      }
+      const existingEmail = await prisma.taiKhoan.findFirst({ where: { TenDangNhap: cleanEmail } });
+      if (existingEmail) return bad(DUPLICATE_ERROR, 409);
     }
 
-    let code = maNV?.trim();
-    if (!code) {
-      const count = await prisma.nhanVien.count();
-      code = `NV${String(count + 1).padStart(3, "0")}`;
-    }
-
-    // Kiem tra trung MaNV
-    const existingMa = await prisma.nhanVien.findUnique({ where: { MaNV: code } });
-    if (existingMa) {
-      return NextResponse.json(
-        { error: "Thông tin đã tồn tại" },
-        { status: 409 }
-      );
-    }
-
-    // 6. Luu thong tin nhan vien va tai khoan email lien ket (neu co)
-    const newEmp = await prisma.$transaction(async (tx) => {
-      const emp = await tx.nhanVien.create({
-        data: {
-          MaNV: code,
-          HoTen: hoTen.trim(),
-          SoDienThoai: cleanPhone,
-          DiaChi: diaChi?.trim() || null,
-          LuongCoBan: Number(luongCoBan) || 8000000,
-          PhuCap: Number(phuCap) || 1000000,
-          TrangThai: "Active",
-        },
-      });
-
-      // Neu co nhap email, tao tai khoan dang nhap mac dinh cho nhan vien
-      if (cleanEmail) {
-        const defaultHash = await hashPassword("123456");
-        await tx.taiKhoan.create({
-          data: {
-            TenDangNhap: cleanEmail,
-            MatKhau: defaultHash,
-            PhanQuyen: "NhanVien",
-            TrangThai: "Active",
-            MaNV: code,
-          },
+    // Luu nhan vien + tai khoan email lien ket (neu co) trong 1 transaction.
+    // Sinh ma trong transaction; neu 2 nguoi them cung luc bi trung ma thi thu lai.
+    const defaultHash = cleanEmail ? await hashPassword("123456") : null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const newEmp = await prisma.$transaction(async (tx) => {
+          const code = await nextMaNV(tx);
+          const emp = await tx.nhanVien.create({
+            data: {
+              MaNV: code,
+              HoTen: hoTen.trim(),
+              SoDienThoai: cleanPhone,
+              DiaChi: cleanAddress || null,
+              LuongCoBan: salary.value,
+              PhuCap: allowance.value,
+              TrangThai: STATUS_ACTIVE, // nhan vien moi luon o trang thai dang lam viec
+            },
+          });
+          if (cleanEmail && defaultHash) {
+            await tx.taiKhoan.create({
+              data: {
+                TenDangNhap: cleanEmail,
+                MatKhau: defaultHash,
+                PhanQuyen: ROLES.BAN_HANG,
+                TrangThai: STATUS_ACTIVE,
+                MaNV: code,
+              },
+            });
+          }
+          return emp;
         });
+
+        return NextResponse.json({
+          success: true,
+          // Bao cho Admin biet da cap tai khoan (truoc day tao ngam)
+          message: cleanEmail
+            ? `Thêm nhân viên mới thành công. Đã cấp tài khoản ${cleanEmail} (mật khẩu mặc định 123456, vai trò BanHang).`
+            : "Thêm nhân viên mới thành công",
+          data: newEmp,
+        });
+      } catch (err) {
+        const isDuplicateKey = err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+        if (!isDuplicateKey || attempt === 2) throw err;
       }
-
-      return emp;
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: "Thêm nhân viên mới thành công",
-      data: newEmp,
-    });
-  } catch (error: any) {
+    }
+    return bad("Không thể sinh mã nhân viên, vui lòng thử lại", 500);
+  } catch (error) {
     console.error("POST nhan-vien error:", error);
-    return NextResponse.json({ error: error.message || "Lỗi tạo mới nhân viên" }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi tạo mới nhân viên" }, { status: 500 });
   }
 }
 
-// PUT: Cap nhat nhan vien (Bao gom rang buoc A2 & Trung lap du lieu doc nhat)
+// PUT: Cap nhat nhan vien - Bang 3.31 (A1 xoa trang / sai dinh dang)
+// Ma NV khong doi duoc. Chuyen "Da nghi viec" -> khoa tai khoan (FR-28).
 export async function PUT(request: Request) {
   try {
+    const auth = await requireFeature("nhanVien");
+    if (!auth.ok) return auth.response;
+
     const body = await request.json();
     const { maNV, hoTen, soDienThoai, email, diaChi, luongCoBan, phuCap, trangThai } = body;
 
-    if (!maNV) {
-      return NextResponse.json({ error: "Thiếu mã nhân viên" }, { status: 400 });
-    }
+    if (!maNV) return bad("Thiếu mã nhân viên");
 
     const currentEmp = await prisma.nhanVien.findUnique({
       where: { MaNV: maNV },
       include: { TaiKhoans: true },
     });
+    if (!currentEmp) return bad("Không tìm thấy nhân viên cần sửa", 404);
 
-    if (!currentEmp) {
-      return NextResponse.json({ error: "Không tìm thấy nhân viên cần sửa" }, { status: 404 });
+    const data: Prisma.NhanVienUpdateInput = {};
+
+    if (hoTen !== undefined) {
+      if (typeof hoTen !== "string" || !hoTen.trim()) return bad("Họ tên không được để trống");
+      if (hoTen.trim().length > MAX_NAME) return bad(`Họ tên tối đa ${MAX_NAME} ký tự`);
+      data.HoTen = hoTen.trim();
     }
 
-    let cleanPhone = currentEmp.SoDienThoai;
     if (soDienThoai !== undefined) {
       if (!soDienThoai || typeof soDienThoai !== "string" || !soDienThoai.trim()) {
-        return NextResponse.json(
-          { error: "Số điện thoại không được để trống" },
-          { status: 400 }
-        );
+        return bad("Số điện thoại không được để trống");
       }
-      cleanPhone = soDienThoai.trim();
-
-      // Ngoai le A2: Sai dinh dang SoDienThoai
+      const cleanPhone = soDienThoai.trim();
       if (!PHONE_REGEX.test(cleanPhone)) {
-        return NextResponse.json(
-          {
-            error:
-              "Số điện thoại không đúng định dạng. Vui lòng nhập số điện thoại gồm đúng 10 chữ số và bắt đầu bằng số 0.",
-          },
-          { status: 400 }
+        return bad(
+          "Số điện thoại không đúng định dạng. Vui lòng nhập số điện thoại gồm đúng 10 chữ số và bắt đầu bằng số 0."
         );
       }
-
-      // Trung lap du lieu doc nhat: Kiem tra SoDienThoai o nhan vien KHAC
       const dupPhone = await prisma.nhanVien.findFirst({
-        where: {
-          SoDienThoai: cleanPhone,
-          NOT: { MaNV: maNV },
-        },
+        where: { SoDienThoai: cleanPhone, NOT: { MaNV: maNV } },
       });
-      if (dupPhone) {
-        return NextResponse.json(
-          { error: "Thông tin đã tồn tại" },
-          { status: 409 }
-        );
-      }
+      if (dupPhone) return bad(DUPLICATE_ERROR, 409);
+      data.SoDienThoai = cleanPhone;
     }
 
-    // Ngoai le A2 & Trung lap voi Email
     let cleanEmail: string | null = null;
     if (email !== undefined && email !== null) {
       const emailStr = String(email).trim();
+      // Xoa trang email: email dang la ten dang nhap cua tai khoan -> khong cho xoa (truoc day bi bo qua ngam)
+      const currentEmailAcc = currentEmp.TaiKhoans.find((tk) => tk.TenDangNhap.includes("@"));
+      if (!emailStr && currentEmailAcc) {
+        return bad(
+          "Không thể để trống email vì đây là tên đăng nhập của tài khoản nhân viên. Muốn thu hồi quyền đăng nhập, hãy khóa tài khoản ở trang Quản lý tài khoản."
+        );
+      }
       if (emailStr) {
         cleanEmail = emailStr.toLowerCase();
-        // A2: Sai dinh dang email
         if (!EMAIL_REGEX.test(cleanEmail)) {
-          return NextResponse.json(
-            {
-              error:
-                "Email không đúng định dạng. Vui lòng kiểm tra lại cấu trúc email (ví dụ: nhanvien@fbshop.vn).",
-            },
-            { status: 400 }
-          );
+          return bad("Email không đúng định dạng. Vui lòng kiểm tra lại cấu trúc email (ví dụ: nhanvien@fbshop.vn).");
         }
-
-        // Trung lap du lieu doc nhat: Kiem tra Email o nhan vien KHAC
         const dupEmail = await prisma.taiKhoan.findFirst({
-          where: {
-            TenDangNhap: cleanEmail,
-            NOT: { MaNV: maNV },
-          },
+          where: { TenDangNhap: cleanEmail, NOT: { MaNV: maNV } },
         });
-        if (dupEmail) {
-          return NextResponse.json(
-            { error: "Thông tin đã tồn tại" },
-            { status: 409 }
-          );
-        }
+        if (dupEmail) return bad(DUPLICATE_ERROR, 409);
       }
     }
 
-    // Thuc thi cap nhat
+    if (diaChi !== undefined) {
+      const cleanAddress = typeof diaChi === "string" ? diaChi.trim() : "";
+      if (cleanAddress.length > MAX_ADDRESS) return bad(`Địa chỉ tối đa ${MAX_ADDRESS} ký tự`);
+      data.DiaChi = cleanAddress || null;
+    }
+    if (luongCoBan !== undefined) {
+      const salary = parseMoney(luongCoBan, "Lương cơ bản");
+      if (!salary.ok) return bad(salary.error);
+      data.LuongCoBan = salary.value;
+    }
+    if (phuCap !== undefined) {
+      const allowance = parseMoney(phuCap, "Phụ cấp");
+      if (!allowance.ok) return bad(allowance.error);
+      data.PhuCap = allowance.value;
+    }
+
+    let resigning = false;
+    let returning = false;
+    if (trangThai !== undefined && trangThai !== null && trangThai !== "") {
+      if (!ALLOWED_STATUSES.includes(trangThai)) return bad("Trạng thái làm việc không hợp lệ");
+      resigning = trangThai === STATUS_RESIGNED && currentEmp.TrangThai !== STATUS_RESIGNED;
+      returning = trangThai !== STATUS_RESIGNED && currentEmp.TrangThai === STATUS_RESIGNED;
+      if (resigning && maNV === auth.user.maNV) {
+        return bad("Không thể tự chuyển chính mình sang Đã nghỉ việc");
+      }
+      data.TrangThai = trangThai;
+    }
+
+    let createdAccount = false;
     const updated = await prisma.$transaction(async (tx) => {
-      const emp = await tx.nhanVien.update({
-        where: { MaNV: maNV },
-        data: {
-          HoTen: hoTen !== undefined ? hoTen.trim() : undefined,
-          SoDienThoai: cleanPhone,
-          DiaChi: diaChi !== undefined ? diaChi?.trim() || null : undefined,
-          LuongCoBan: luongCoBan !== undefined ? Number(luongCoBan) : undefined,
-          PhuCap: phuCap !== undefined ? Number(phuCap) : undefined,
-          TrangThai: trangThai || undefined,
-        },
-      });
+      const emp = await tx.nhanVien.update({ where: { MaNV: maNV }, data });
 
       // Cap nhat email vao tai khoan lien ket neu co
       if (cleanEmail) {
@@ -290,74 +305,91 @@ export async function PUT(request: Request) {
             data: { TenDangNhap: cleanEmail },
           });
         } else {
-          const defaultHash = await hashPassword("123456");
           await tx.taiKhoan.create({
             data: {
               TenDangNhap: cleanEmail,
-              MatKhau: defaultHash,
-              PhanQuyen: "NhanVien",
-              TrangThai: "Active",
+              MatKhau: await hashPassword("123456"),
+              PhanQuyen: ROLES.BAN_HANG,
+              // Nhan vien da nghi viec thi tai khoan tao moi cung bi khoa
+              TrangThai: emp.TrangThai === STATUS_RESIGNED ? ACCOUNT_LOCKED : STATUS_ACTIVE,
               MaNV: maNV,
             },
           });
+          createdAccount = true;
         }
       }
 
+      // FR-28: nghi viec -> khoa tai khoan dang nhap
+      if (resigning) {
+        await tx.taiKhoan.updateMany({ where: { MaNV: maNV }, data: { TrangThai: ACCOUNT_LOCKED } });
+      }
       return emp;
     });
 
-    return NextResponse.json({
-      success: true,
-      message: "Cập nhật nhân viên thành công",
-      data: updated,
-    });
-  } catch (error: any) {
+    const notes = ["Cập nhật thông tin thành công."];
+    if (resigning) notes.push("Nhân viên đã nghỉ việc, tài khoản đăng nhập đã bị khóa.");
+    if (returning && currentEmp.TaiKhoans.length > 0) {
+      notes.push("Tài khoản đăng nhập vẫn đang khóa, mở khóa tại trang Quản lý tài khoản nếu cần.");
+    }
+    if (createdAccount) {
+      notes.push(`Đã cấp tài khoản ${cleanEmail} (mật khẩu mặc định 123456, vai trò BanHang).`);
+    }
+
+    return NextResponse.json({ success: true, message: notes.join(" "), data: updated });
+  } catch (error) {
     console.error("PUT nhan-vien error:", error);
-    return NextResponse.json({ error: error.message || "Lỗi cập nhật nhân viên" }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi cập nhật nhân viên" }, { status: 500 });
   }
 }
 
-// DELETE: Xoa hoac chuyen Da nghi viec
+// DELETE: Bang 3.32 - co lich su lam viec -> chuyen "Da nghi viec" + khoa tai khoan; chua co -> xoa han
 export async function DELETE(request: Request) {
   try {
+    const auth = await requireFeature("nhanVien");
+    if (!auth.ok) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const maNV = searchParams.get("maNV");
+    if (!maNV) return bad("Thiếu mã nhân viên cần xóa");
 
-    if (!maNV) {
-      return NextResponse.json({ error: "Thiếu mã nhân viên cần xóa" }, { status: 400 });
-    }
+    // Khong tu xoa chinh minh (mat tai khoan dang dung)
+    if (maNV === auth.user.maNV) return bad("Không thể xóa nhân viên gắn với tài khoản đang đăng nhập");
 
-    // Kiem tra rang buoc trong HoaDonKho
-    const invoiceCount = await prisma.hoaDonKho.count({
-      where: { MaNV: maNV },
-    });
+    const emp = await prisma.nhanVien.findUnique({ where: { MaNV: maNV } });
+    if (!emp) return bad("Không tìm thấy nhân viên cần xóa", 404);
+
+    // A1 - Rang buoc du lieu lien quan (hoa don kho; don hang khong gan voi nhan vien)
+    const invoiceCount = await prisma.hoaDonKho.count({ where: { MaNV: maNV } });
 
     if (invoiceCount > 0) {
-      await prisma.nhanVien.update({
-        where: { MaNV: maNV },
-        data: { TrangThai: "Da nghi viec" },
-      });
-
+      // Da nghi viec san thi khong con gi de doi - bao ro thay vi lap lai thong bao "da chuyen"
+      if (emp.TrangThai === STATUS_RESIGNED) {
+        return bad("Nhân viên đã nghỉ việc và có lịch sử làm việc nên không thể xóa khỏi hệ thống.");
+      }
+      await prisma.$transaction([
+        prisma.nhanVien.update({ where: { MaNV: maNV }, data: { TrangThai: STATUS_RESIGNED } }),
+        prisma.taiKhoan.updateMany({ where: { MaNV: maNV }, data: { TrangThai: ACCOUNT_LOCKED } }),
+      ]);
       return NextResponse.json({
         success: true,
         softDeleted: true,
-        message: "Nhân viên đã có lịch sử lập hóa đơn kho. Đã chuyển trạng thái sang 'Đã nghỉ việc'.",
+        message:
+          "Không thể xóa nhân viên đã phát sinh lịch sử làm việc. Hệ thống đã chuyển trạng thái nhân viên sang Đã nghỉ việc và khóa tài khoản.",
       });
     }
 
-    // Xoa ca tai khoan lien ket neu co
-    await prisma.taiKhoan.deleteMany({ where: { MaNV: maNV } });
-
-    await prisma.nhanVien.delete({
-      where: { MaNV: maNV },
-    });
+    // Chua co lich su: xoa tai khoan lien ket va nhan vien trong 1 transaction
+    await prisma.$transaction([
+      prisma.taiKhoan.deleteMany({ where: { MaNV: maNV } }),
+      prisma.nhanVien.delete({ where: { MaNV: maNV } }),
+    ]);
 
     return NextResponse.json({
       success: true,
       softDeleted: false,
-      message: "Đã xóa nhân viên thành công.",
+      message: "Xóa nhân viên thành công",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("DELETE nhan-vien error:", error);
     return NextResponse.json({ error: "Lỗi khi xóa nhân viên" }, { status: 500 });
   }

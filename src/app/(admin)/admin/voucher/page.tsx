@@ -371,13 +371,10 @@ export default function AdminVoucherPage() {
       {/* Header Bar */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Tag className="h-6 w-6 text-[#f66315]" />
             QUẢN LÝ MÃ KHUYẾN MẠI (VOUCHER)
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Bảo toàn kế toán: Tự động khóa sửa định giá khi voucher đã có lượt đặt hàng
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -390,44 +387,44 @@ export default function AdminVoucherPage() {
           </button>
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
           >
-            <Download className="h-4 w-4 text-gray-500" />
+            <Download className="h-4 w-4 text-slate-500" />
             Xuất Excel
           </button>
         </div>
       </div>
 
       {/* Search & Filter Bar - Bám sát đặc tả Tìm kiếm và lọc voucher */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
         <form onSubmit={handleSearchSubmit} className="space-y-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
             {/* 1. Ô tìm kiếm từ khóa (Mã voucher / Loại) */}
             <div className="md:col-span-4">
-              <label className="mb-1 block text-xs font-bold text-gray-700">
+              <label className="mb-1 block text-xs font-bold text-slate-700">
                 Tìm kiếm mã voucher
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Nhập mã voucher..."
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  className="h-[38px] w-full rounded-xl border border-gray-200 py-2 pl-9 pr-3 text-xs outline-none focus:border-[#f66315]"
+                  className="h-[38px] w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-xs outline-none focus:border-[#f66315]"
                 />
               </div>
             </div>
 
             {/* 2. Lọc theo trạng thái */}
             <div className="md:col-span-3">
-              <label className="mb-1 block text-xs font-bold text-gray-700">
+              <label className="mb-1 block text-xs font-bold text-slate-700">
                 Trạng thái
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-[38px] w-full rounded-xl border border-gray-200 px-3 py-2 text-xs outline-none focus:border-[#f66315]"
+                className="h-[38px] w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#f66315]"
               >
                 <option value="ALL">Tất cả trạng thái</option>
                 <option value="Sắp diễn ra">Sắp diễn ra</option>
@@ -439,7 +436,7 @@ export default function AdminVoucherPage() {
 
             {/* 3. Lọc theo thời gian: Từ ngày & Đến ngày */}
             <div className="md:col-span-3">
-              <label className="mb-1 block text-xs font-bold text-gray-700">
+              <label className="mb-1 block text-xs font-bold text-slate-700">
                 Lọc theo thời gian
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -453,7 +450,7 @@ export default function AdminVoucherPage() {
                   className={`h-[38px] w-full rounded-xl border p-2 text-xs outline-none transition-all ${
                     dateError
                       ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-200 focus:border-[#f66315]"
+                      : "border-slate-200 focus:border-[#f66315]"
                   }`}
                   title="Từ ngày"
                 />
@@ -467,7 +464,7 @@ export default function AdminVoucherPage() {
                   className={`h-[38px] w-full rounded-xl border p-2 text-xs outline-none transition-all ${
                     dateError
                       ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-200 focus:border-[#f66315]"
+                      : "border-slate-200 focus:border-[#f66315]"
                   }`}
                   title="Đến ngày"
                 />
@@ -486,7 +483,7 @@ export default function AdminVoucherPage() {
               <button
                 type="button"
                 onClick={handleResetFilter}
-                className="h-[38px] flex items-center justify-center gap-1 rounded-xl border border-gray-300 bg-white py-2 px-3 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                className="h-[38px] flex items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
                 title="Đặt lại bộ lọc (Clear filter)"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
@@ -506,10 +503,10 @@ export default function AdminVoucherPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-gray-200 bg-gray-50/80 font-bold text-gray-700 uppercase">
+            <thead className="border-b border-slate-200 bg-slate-50/80 font-bold text-slate-700 uppercase">
               <tr>
                 <th className="px-4 py-3">Mã Voucher</th>
                 <th className="px-4 py-3">Loại Giảm</th>
@@ -521,22 +518,22 @@ export default function AdminVoucherPage() {
                 <th className="px-4 py-3 text-right">Thao Tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400 font-medium">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                     Đang tải danh sách voucher...
                   </td>
                 </tr>
               ) : vouchers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-500 font-medium">
+                  <td colSpan={8} className="py-12 text-center text-slate-500 font-medium">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Tag className="h-8 w-8 text-gray-300" />
-                      <p className="text-sm font-bold text-gray-700">
+                      <Tag className="h-8 w-8 text-slate-300" />
+                      <p className="text-sm font-bold text-slate-700">
                         Không tìm thấy mã giảm giá phù hợp
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-slate-400">
                         Vui lòng thử lại với từ khóa hoặc tiêu chí lọc khác
                       </p>
                     </div>
@@ -563,23 +560,23 @@ export default function AdminVoucherPage() {
                       statusColor = "bg-blue-50 text-blue-600 border-blue-200";
                     } else if (now > end) {
                       statusLabel = "Đã kết thúc";
-                      statusColor = "bg-gray-50 text-gray-600 border-gray-200";
+                      statusColor = "bg-slate-50 text-slate-600 border-slate-200";
                     } else {
                       statusLabel = "Đang hoạt động";
                     }
                   }
 
                   return (
-                    <tr key={v.MaVoucher} className="hover:bg-gray-50/60 transition-colors">
+                    <tr key={v.MaVoucher} className="hover:bg-slate-50/60 transition-colors">
                       <td className="px-4 py-3">
                         <div
-                          className="flex items-center gap-1.5 font-mono font-bold text-gray-900"
+                          className="flex items-center gap-1.5 font-mono font-bold text-slate-900"
                           title={isUsed ? "Đã có lượt dùng (Khóa định giá)" : "Chưa có lượt dùng"}
                         >
                           {isUsed ? (
                             <Lock className="h-3 w-3 text-amber-500" />
                           ) : (
-                            <Unlock className="h-3 w-3 text-gray-400" />
+                            <Unlock className="h-3 w-3 text-slate-400" />
                           )}
                           <span>{v.MaVoucher}</span>
                         </div>
@@ -595,24 +592,24 @@ export default function AdminVoucherPage() {
                           {v.LoaiGiamGia === "PHANTRAM" ? "GIẢM %" : "GIẢM TIỀN"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-black text-[#f66315]">
+                      <td className="px-4 py-3 text-right font-bold text-[#f66315]">
                         {v.LoaiGiamGia === "PHANTRAM"
                           ? `${v.GiaTriGiam}% (Tối đa ${Number(v.MucGiamToiDa).toLocaleString()}đ)`
                           : `${Number(v.GiaTriGiam).toLocaleString("vi-VN")} đ`}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-600">
+                      <td className="px-4 py-3 text-right text-slate-600">
                         {Number(v.DonHangToiThieu).toLocaleString("vi-VN")} đ
                       </td>
-                      <td className="px-4 py-3 text-center font-bold text-gray-800">
+                      <td className="px-4 py-3 text-center font-bold text-slate-800">
                         <span className="text-[#f66315]">{v._count?.DonHangs || 0}</span> / {v.TongSoLuong}
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-600">
+                      <td className="px-4 py-3 text-center text-slate-600">
                         <div className="flex flex-col items-center gap-0.5 text-[11px] leading-tight">
-                          <span className="text-gray-600">
-                            <span className="font-semibold text-gray-400">Từ:</span> {formatDisplayDateTime(v.NgayBatDau)}
+                          <span className="text-slate-600">
+                            <span className="font-semibold text-slate-400">Từ:</span> {formatDisplayDateTime(v.NgayBatDau)}
                           </span>
-                          <span className="text-gray-600">
-                            <span className="font-semibold text-gray-400">Đến:</span> {formatDisplayDateTime(v.NgayKetThuc)}
+                          <span className="text-slate-600">
+                            <span className="font-semibold text-slate-400">Đến:</span> {formatDisplayDateTime(v.NgayKetThuc)}
                           </span>
                         </div>
                       </td>
@@ -638,14 +635,14 @@ export default function AdminVoucherPage() {
                           </button>
                           <button
                             onClick={() => handleOpenEdit(v)}
-                            className="rounded-lg border border-gray-200 p-1.5 text-gray-600 hover:bg-gray-100"
+                            className="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-100"
                             title="Chỉnh sửa"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(v.MaVoucher)}
-                            className="rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50"
                             title="Xóa voucher"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -664,10 +661,10 @@ export default function AdminVoucherPage() {
       {/* Modal Them / Sua Voucher */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-gray-100">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h3 className="text-base font-black text-gray-900">
+                <h3 className="text-base font-bold text-slate-900">
                   {editingVoucher ? `CHỈNH SỬA VOUCHER: ${editingVoucher.MaVoucher}` : "TẠO VOUCHER MỚI"}
                 </h3>
                 {isLockedPrice && (
@@ -679,7 +676,7 @@ export default function AdminVoucherPage() {
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="rounded-xl p-2 text-gray-400 hover:bg-gray-100"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
               >
                 ✕
               </button>
@@ -687,7 +684,7 @@ export default function AdminVoucherPage() {
 
             <form onSubmit={handleSave} className="space-y-3.5 text-xs">
               <div>
-                <label className="mb-1 block font-bold text-gray-700">
+                <label className="mb-1 block font-bold text-slate-700">
                   Mã Voucher <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -704,10 +701,10 @@ export default function AdminVoucherPage() {
                     setFormData({ ...formData, maVoucher: e.target.value.toUpperCase() });
                     clearError("maVoucher");
                   }}
-                  className={`w-full rounded-xl border p-2.5 font-mono uppercase outline-none transition-all disabled:bg-gray-100 ${
+                  className={`w-full rounded-xl border p-2.5 font-mono uppercase outline-none transition-all disabled:bg-slate-100 ${
                     errors.maVoucher
                       ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-200 focus:border-[#f66315]"
+                      : "border-slate-200 focus:border-[#f66315]"
                   }`}
                 />
                 {errors.maVoucher && (
@@ -720,7 +717,7 @@ export default function AdminVoucherPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">Loại giảm giá</label>
+                  <label className="mb-1 block font-bold text-slate-700">Loại giảm giá</label>
                   <select
                     disabled={isLockedPrice}
                     value={formData.loaiGiamGia}
@@ -736,14 +733,14 @@ export default function AdminVoucherPage() {
                         clearError("giaTriGiam");
                       }
                     }}
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none disabled:bg-gray-100"
+                    className="w-full rounded-xl border border-slate-200 p-2.5 outline-none disabled:bg-slate-100"
                   >
                     <option value="TIEN">Giảm tiền mặt (VNĐ)</option>
                     <option value="PHANTRAM">Giảm phần trăm (%)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">
+                  <label className="mb-1 block font-bold text-slate-700">
                     {formData.loaiGiamGia === "PHANTRAM" ? "Phần trăm giảm (%)" : "Số tiền giảm (VNĐ)"}{" "}
                     <span className="text-red-500">*</span>
                   </label>
@@ -775,10 +772,10 @@ export default function AdminVoucherPage() {
                       });
                       clearError("giaTriGiam");
                     }}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-gray-100 ${
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-slate-100 ${
                       errors.giaTriGiam
                         ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                        : "border-gray-200 focus:border-[#f66315]"
+                        : "border-slate-200 focus:border-[#f66315]"
                     }`}
                   />
                   {errors.giaTriGiam && (
@@ -792,7 +789,7 @@ export default function AdminVoucherPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">
+                  <label className="mb-1 block font-bold text-slate-700">
                     Đơn tối thiểu (VNĐ) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -816,10 +813,10 @@ export default function AdminVoucherPage() {
                       });
                       clearError("donHangToiThieu");
                     }}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-gray-100 ${
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-slate-100 ${
                       errors.donHangToiThieu
                         ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                        : "border-gray-200 focus:border-[#f66315]"
+                        : "border-slate-200 focus:border-[#f66315]"
                     }`}
                   />
                   {errors.donHangToiThieu && (
@@ -830,7 +827,7 @@ export default function AdminVoucherPage() {
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700">
+                  <label className="mb-1 block font-bold text-slate-700">
                     Giảm tối đa (VNĐ) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -854,10 +851,10 @@ export default function AdminVoucherPage() {
                       });
                       clearError("mucGiamToiDa");
                     }}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-gray-100 ${
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-slate-100 ${
                       errors.mucGiamToiDa
                         ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                        : "border-gray-200 focus:border-[#f66315]"
+                        : "border-slate-200 focus:border-[#f66315]"
                     }`}
                   />
                   {errors.mucGiamToiDa && (
@@ -870,7 +867,7 @@ export default function AdminVoucherPage() {
               </div>
 
               <div>
-                <label className="mb-1 block font-bold text-gray-700">
+                <label className="mb-1 block font-bold text-slate-700">
                   Tổng số lượng phát hành <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -901,7 +898,7 @@ export default function AdminVoucherPage() {
                   className={`w-full rounded-xl border p-2.5 outline-none transition-all ${
                     errors.tongSoLuong
                       ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-200 focus:border-[#f66315]"
+                      : "border-slate-200 focus:border-[#f66315]"
                   }`}
                 />
                 {errors.tongSoLuong && (
@@ -914,7 +911,7 @@ export default function AdminVoucherPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700 flex items-center gap-1">
+                  <label className="mb-1 block font-bold text-slate-700 flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5 text-[#f66315]" />
                     Bắt đầu (Ngày & Giờ) <span className="text-red-500">*</span>
                   </label>
@@ -939,10 +936,10 @@ export default function AdminVoucherPage() {
                       setFormData({ ...formData, ngayBatDau: e.target.value });
                       clearError("ngayBatDau");
                     }}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-gray-100 text-xs ${
+                    className={`w-full rounded-xl border p-2.5 outline-none transition-all disabled:bg-slate-100 text-xs ${
                       errors.ngayBatDau
                         ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                        : "border-gray-200 focus:border-[#f66315]"
+                        : "border-slate-200 focus:border-[#f66315]"
                     }`}
                   />
                   {errors.ngayBatDau && (
@@ -953,8 +950,8 @@ export default function AdminVoucherPage() {
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block font-bold text-gray-700 flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                  <label className="mb-1 block font-bold text-slate-700 flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
                     Kết thúc (Ngày & Giờ) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -974,7 +971,7 @@ export default function AdminVoucherPage() {
                     className={`w-full rounded-xl border p-2.5 outline-none transition-all text-xs ${
                       errors.ngayKetThuc
                         ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
-                        : "border-gray-200 focus:border-[#f66315]"
+                        : "border-slate-200 focus:border-[#f66315]"
                     }`}
                   />
                   {errors.ngayKetThuc && (
@@ -986,11 +983,11 @@ export default function AdminVoucherPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-600 hover:bg-gray-50"
+                  className="rounded-xl border border-slate-300 px-4 py-2 font-bold text-slate-600 hover:bg-slate-50"
                 >
                   Hủy
                 </button>

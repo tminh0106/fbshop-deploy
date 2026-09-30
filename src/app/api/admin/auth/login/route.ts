@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { verifyPassword, generateAdminToken } from "@/lib/auth";
+import { isStaffRole, normalizeRole } from "@/lib/permissions";
 
 export async function POST(request: Request) {
   try {
@@ -65,12 +66,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Cong quan tri chi danh cho 3 vai tro noi bo (FR-03): Admin, NhanVienKho, BanHang
+    if (!isStaffRole(taiKhoan.PhanQuyen)) {
+      return NextResponse.json(
+        { error: "Tài khoản không có quyền truy cập trang quản trị" },
+        { status: 403 }
+      );
+    }
+    const role = normalizeRole(taiKhoan.PhanQuyen)!;
+
     const hoTen = taiKhoan.NhanVien?.HoTen || taiKhoan.TenDangNhap;
     const token = generateAdminToken({
       maTK: taiKhoan.MaTK,
       tenDangNhap: taiKhoan.TenDangNhap,
       hoTen,
-      role: taiKhoan.PhanQuyen,
+      role,
       maNV: taiKhoan.MaNV,
     });
 
@@ -80,7 +90,7 @@ export async function POST(request: Request) {
         maTK: taiKhoan.MaTK,
         tenDangNhap: taiKhoan.TenDangNhap,
         hoTen,
-        role: taiKhoan.PhanQuyen,
+        role,
         maNV: taiKhoan.MaNV,
       },
     });

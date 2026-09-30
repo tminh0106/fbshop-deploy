@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { requireFeature } from "@/lib/auth";
 
 // GET: Danh sach voucher (Ho tro tim kiem va loc theo dac ta)
 export async function GET(request: Request) {
   try {
+    const auth = await requireFeature("voucher");
+    if (!auth.ok) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const keyword = searchParams.get("keyword")?.trim();
     const status = searchParams.get("status")?.trim();
@@ -82,6 +86,9 @@ export async function GET(request: Request) {
 // POST: Them voucher moi
 export async function POST(request: Request) {
   try {
+    const auth = await requireFeature("voucher");
+    if (!auth.ok) return auth.response;
+
     const body = await request.json();
     const {
       maVoucher,
@@ -176,6 +183,9 @@ export async function POST(request: Request) {
 // PUT: Cap nhat voucher (Bao toan ke toan)
 export async function PUT(request: Request) {
   try {
+    const auth = await requireFeature("voucher");
+    if (!auth.ok) return auth.response;
+
     const body = await request.json();
     const {
       maVoucher,
@@ -276,6 +286,9 @@ export async function PUT(request: Request) {
 // DELETE: Vo hieu hoa hoac xoa voucher
 export async function DELETE(request: Request) {
   try {
+    const auth = await requireFeature("voucher");
+    if (!auth.ok) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const maVoucher = searchParams.get("maVoucher");
 

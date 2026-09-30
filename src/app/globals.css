@@ -1,44 +1,180 @@
 @import "tailwindcss";
 
+/* =======================================================
+   FBSHOP DESIGN SYSTEM
+   - Mau thuong hieu: cam FBShop (#f66315) + nen muc dam (ink)
+   - Phong cach theo fbshop.vn: cam #f66315, chu xanh den #031230, nen hong dao #feefe8
+   - Font: Familjen Grotesk (than chu + tieu de), JetBrains Mono (ma so)
+   ======================================================= */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-primary: #f66315;
   --color-primary-dark: #d4520f;
   --color-primary-light: #ff8a50;
-  --color-dark: #1a1a2e;
-  --color-dark-secondary: #16213e;
+  --color-primary-soft: #feefe8;
+  --color-navy: #031230;
+  --color-amber-brand: #f6af15;
+  --color-page: #f8f8f8;
+
+  --color-dark: #0f172a;
+  --color-dark-secondary: #1e293b;
+  --color-ink: #0b1220;
   --color-surface: #ffffff;
-  --color-muted: #6b7280;
-  --color-border: #e5e7eb;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: #64748b;
+  --color-border: #e8eaef;
+
+  --font-sans: var(--font-familjen), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-familjen), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
+
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px -4px rgba(15, 23, 42, 0.06);
+  --shadow-lift: 0 2px 4px rgba(15, 23, 42, 0.04), 0 18px 40px -12px rgba(15, 23, 42, 0.18);
+  --shadow-brand: 0 10px 30px -10px rgba(246, 99, 21, 0.55);
+
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-float: float 6s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-14px) rotate(-3deg); }
 }
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Khung noi dung chuan: toi da 1280px, le 16px tren mobile */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  width: 100%;
+  max-width: 80rem;
+  @media (width >= 64rem) {
+    padding-inline: 1.5rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* So lieu trong bang: canh deu cot so */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  input, select, textarea, button {
+    font-family: inherit;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  ::selection {
+    background: rgba(246, 99, 21, 0.18);
+    color: #7c2d12;
+  }
+
+  :focus-visible {
+    outline: 2px solid #f66315;
+    outline-offset: 2px;
+  }
+
+  /* Thanh cuon mong, gon */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+  *::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  *::-webkit-scrollbar-track { background: transparent; }
 }
 
-html { scroll-behavior: smooth; }
-
+/* ===== Tien ich thuong hieu ===== */
 .fbshop-gradient {
-  background: linear-gradient(135deg, #f66315 0%, #ff8a50 50%, #f66315 100%);
+  background: linear-gradient(110deg, #e2520a 0%, #f66315 45%, #ff8a50 100%);
 }
 
 .card-glow:hover {
-  box-shadow: 0 8px 30px rgba(246, 99, 21, 0.15);
+  box-shadow: 0 12px 36px -8px rgba(246, 99, 21, 0.25);
+}
+
+.text-gradient-brand {
+  background: linear-gradient(100deg, #ff9a5c 0%, #f66315 55%, #ffb37a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Nen luoi mo cho hero */
+.bg-grid-dark {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ===== Khu vuc quan tri: tinh chinh chung cho moi trang admin ===== */
+.admin-shell table thead th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.admin-shell table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.admin-shell .font-mono {
+  font-feature-settings: "zero" 0;
+  letter-spacing: -0.01em;
+}
+
+/* ===== Trang tri kieu fbshop.vn ===== */
+/* Soc cheo mau cam o hai ben khu vuc */
+.fb-stripes {
+  background-image: repeating-linear-gradient(
+    -60deg,
+    rgba(246, 99, 21, 0.55) 0 2px,
+    transparent 2px 9px
+  );
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 20%, #000 80%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 20%, #000 80%, transparent);
 }

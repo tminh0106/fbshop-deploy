@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { exportToExcel } from "@/lib/exportExcel";
+import { ORDER_STATUS, ORDER_UNDELETABLE, orderStatusLabel } from "@/lib/orderStatus";
 
 interface OrderItem {
   MaDH: string;
@@ -68,6 +69,10 @@ export default function AdminDonHangPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const fetchOrders = async () => {
+    if (tuNgay && denNgay && tuNgay > denNgay) {
+      toast.error("Khoảng thời gian tìm kiếm không hợp lệ");
+      return;
+    }
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -81,7 +86,7 @@ export default function AdminDonHangPage() {
       if (res.ok) {
         setOrders(json.data || []);
       } else {
-        toast.error("Lỗi khi tải đơn hàng");
+        toast.error(json.error || "Lỗi khi tải đơn hàng");
       }
     } catch {
       toast.error("Lỗi kết nối máy chủ");
@@ -95,6 +100,12 @@ export default function AdminDonHangPage() {
   }, []);
 
   const handleUpdateStatus = async (maDH: string, newStatus: string) => {
+    if (
+      newStatus === ORDER_STATUS.CANCELLED &&
+      !confirm("Hủy đơn hàng này? Tồn kho các sản phẩm trong đơn sẽ được hoàn trả.")
+    ) {
+      return;
+    }
     setUpdatingId(maDH);
     try {
       const res = await fetch(`/api/admin/don-hang/${maDH}/status`, {
@@ -118,7 +129,7 @@ export default function AdminDonHangPage() {
   };
 
   const handleDeleteOrder = async (maDH: string) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa đơn hàng ${maDH}?`)) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa đơn hàng này không?")) return;
 
     try {
       const res = await fetch(`/api/admin/don-hang/${maDH}`, {
@@ -128,7 +139,7 @@ export default function AdminDonHangPage() {
       if (!res.ok) {
         toast.error(data.error || "Không thể xóa đơn hàng");
       } else {
-        toast.success("Đã xóa đơn hàng");
+        toast.success(data.message || "Xóa đơn hàng thành công");
         fetchOrders();
       }
     } catch {
@@ -137,6 +148,10 @@ export default function AdminDonHangPage() {
   };
 
   const handleExportExcel = () => {
+    if (orders.length === 0) {
+      toast.error("Không có dữ liệu đơn hàng để xuất file");
+      return;
+    }
     const dataToExport = orders.map((o) => ({
       "Mã đơn hàng": o.MaDH,
       "Ngày đặt": new Date(o.NgayTao).toLocaleString("vi-VN"),
@@ -146,7 +161,7 @@ export default function AdminDonHangPage() {
       "Tổng tiền (VNĐ)": Number(o.TongTien),
       "Phương thức": o.PhuongThucThanhToan,
       "Mã Voucher": o.Voucher?.MaVoucher || "Không dùng",
-      "Trạng thái": o.TrangThai,
+      "Trạng thái": orderStatusLabel(o.TrangThai),
       "Ghi chú": o.GhiChu || "",
     }));
 
@@ -156,6 +171,14 @@ export default function AdminDonHangPage() {
 
   const getStatusBadge = (st: string) => {
     switch (st) {
+      case "Cho thanh toan":
+        return {
+          label: "Chờ thanh toán",
+          className: "bg-slate-50 text-slate-700 border-slate-300",
+          icon: Clock,
+          next: "Cho xac nhan",
+          nextLabel: "Đã nhận tiền",
+        };
       case "Cho xac nhan":
       case "Pending":
         return {
@@ -208,26 +231,23 @@ export default function AdminDonHangPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <ShoppingCart className="h-6 w-6 text-[#f66315]" />
-            QUẢN LÝ ĐƠN HÀNG (ORDER WORKFLOW)
+            QUẢN LÝ ĐƠN HÀNG
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Duyệt đơn tuần tự: Chờ xác nhận → Đang xử lý → Đang giao → Đã giao
-          </p>
         </div>
 
         <button
           onClick={handleExportExcel}
-          className="flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all self-start"
+          className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all self-start"
         >
-          <Download className="h-4 w-4 text-gray-500" />
+          <Download className="h-4 w-4 text-slate-500" />
           Xuất file Excel
         </button>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -236,13 +256,13 @@ export default function AdminDonHangPage() {
           className="grid grid-cols-1 gap-3 md:grid-cols-5"
         >
           <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Tìm theo mã đơn, người nhận, SĐT..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 py-2 pl-9 pr-3 text-xs outline-none focus:border-[#f66315]"
+              className="w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-xs outline-none focus:border-[#f66315]"
             />
           </div>
 
@@ -250,9 +270,10 @@ export default function AdminDonHangPage() {
             <select
               value={trangThai}
               onChange={(e) => setTrangThai(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
+              className="w-full rounded-xl border border-slate-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
             >
               <option value="ALL">-- Tất cả trạng thái --</option>
+              <option value="Cho thanh toan">Chờ thanh toán</option>
               <option value="Cho xac nhan">Chờ xác nhận</option>
               <option value="Dang xu ly">Đang xử lý</option>
               <option value="Dang giao">Đang giao</option>
@@ -266,7 +287,7 @@ export default function AdminDonHangPage() {
               type="date"
               value={tuNgay}
               onChange={(e) => setTuNgay(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
+              className="w-full rounded-xl border border-slate-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
               title="Từ ngày"
             />
           </div>
@@ -276,7 +297,7 @@ export default function AdminDonHangPage() {
               type="date"
               value={denNgay}
               onChange={(e) => setDenNgay(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
+              className="w-full rounded-xl border border-slate-200 py-2 px-3 text-xs outline-none focus:border-[#f66315]"
               title="Đến ngày"
             />
           </div>
@@ -284,10 +305,10 @@ export default function AdminDonHangPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-gray-200 bg-gray-50/80 font-bold text-gray-700 uppercase">
+            <thead className="border-b border-slate-200 bg-slate-50/80 font-bold text-slate-700 uppercase">
               <tr>
                 <th className="px-4 py-3">Mã Đơn</th>
                 <th className="px-4 py-3">Ngày Đặt</th>
@@ -299,17 +320,17 @@ export default function AdminDonHangPage() {
                 <th className="px-4 py-3 text-right">Thao Tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400 font-medium">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                     Đang tải danh sách đơn hàng...
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400 font-medium">
-                    Không tìm thấy đơn hàng nào phù hợp
+                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
+                    Không tìm thấy đơn hàng phù hợp
                   </td>
                 </tr>
               ) : (
@@ -317,17 +338,18 @@ export default function AdminDonHangPage() {
                   const badge = getStatusBadge(o.TrangThai);
                   const Icon = badge.icon;
                   const canCancel =
+                    o.TrangThai === "Cho thanh toan" ||
                     o.TrangThai === "Cho xac nhan" ||
                     o.TrangThai === "Dang xu ly" ||
                     o.TrangThai === "Pending" ||
                     o.TrangThai === "Processing";
 
                   return (
-                    <tr key={o.MaDH} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-4 py-3 font-mono font-bold text-gray-900">
+                    <tr key={o.MaDH} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3 font-mono font-bold text-slate-900">
                         {o.MaDH.slice(0, 10)}...
                       </td>
-                      <td className="px-4 py-3 text-gray-500">
+                      <td className="px-4 py-3 text-slate-500">
                         {new Date(o.NgayTao).toLocaleString("vi-VN", {
                           day: "2-digit",
                           month: "2-digit",
@@ -337,13 +359,13 @@ export default function AdminDonHangPage() {
                         })}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-bold text-gray-800">{o.TenNguoiNhan}</p>
-                        <span className="text-[11px] text-gray-500">{o.SdtNguoiNhan}</span>
+                        <p className="font-bold text-slate-800">{o.TenNguoiNhan}</p>
+                        <span className="text-[11px] text-slate-500">{o.SdtNguoiNhan}</span>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className="px-4 py-3 text-slate-600">
                         {o.ChiTietDonHangs?.length || 0} sản phẩm
                       </td>
-                      <td className="px-4 py-3 text-right font-black text-[#f66315]">
+                      <td className="px-4 py-3 text-right font-bold text-[#f66315]">
                         {Number(o.TongTien).toLocaleString("vi-VN")} đ
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -382,18 +404,20 @@ export default function AdminDonHangPage() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setViewingOrder(o)}
-                            className="rounded-lg border border-gray-200 p-1.5 text-gray-600 hover:bg-gray-100 hover:text-black transition-all"
+                            className="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-100 hover:text-black transition-all"
                             title="Xem chi tiết đơn hàng"
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteOrder(o.MaDH)}
-                            className="rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
-                            title="Xóa đơn (chỉ đơn hợp lệ)"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {!ORDER_UNDELETABLE.includes(o.TrangThai) && (
+                            <button
+                              onClick={() => handleDeleteOrder(o.MaDH)}
+                              className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                              title="Xóa đơn hàng"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -408,32 +432,32 @@ export default function AdminDonHangPage() {
       {/* Modal Chi Tiet Don Hang */}
       {viewingOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h3 className="text-base font-black text-gray-900">
+                <h3 className="text-base font-bold text-slate-900">
                   CHI TIẾT ĐƠN HÀNG: {viewingOrder.MaDH}
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   Đặt lúc {new Date(viewingOrder.NgayTao).toLocaleString("vi-VN")}
                 </p>
               </div>
               <button
                 onClick={() => setViewingOrder(null)}
-                className="rounded-xl p-2 text-gray-400 hover:bg-gray-100"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-4 text-xs">
-              <div className="bg-gray-50 p-3.5 rounded-2xl space-y-2">
-                <div className="flex items-center gap-2 text-gray-800 font-bold">
+              <div className="bg-slate-50 p-3.5 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2 text-slate-800 font-bold">
                   <User className="h-4 w-4 text-[#f66315]" />
                   <span>{viewingOrder.TenNguoiNhan} - {viewingOrder.SdtNguoiNhan}</span>
                 </div>
-                <div className="flex items-start gap-2 text-gray-600">
-                  <MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 text-slate-600">
+                  <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
                   <span>{viewingOrder.DiaChiNhan}</span>
                 </div>
                 {viewingOrder.Voucher && (
@@ -443,17 +467,17 @@ export default function AdminDonHangPage() {
                   </div>
                 )}
                 {viewingOrder.GhiChu && (
-                  <p className="text-gray-500 italic pl-6">
+                  <p className="text-slate-500 italic pl-6">
                     Ghi chú: {viewingOrder.GhiChu}
                   </p>
                 )}
               </div>
 
               <div>
-                <h4 className="font-bold text-gray-700 mb-2">Sản phẩm đặt mua:</h4>
-                <div className="border border-gray-100 rounded-xl overflow-hidden">
+                <h4 className="font-bold text-slate-700 mb-2">Sản phẩm đặt mua:</h4>
+                <div className="border border-slate-100 rounded-xl overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-50 font-bold text-gray-600">
+                    <thead className="bg-slate-50 font-bold text-slate-600">
                       <tr>
                         <th className="p-2.5">Sản phẩm</th>
                         <th className="p-2.5 text-center">SL</th>
@@ -461,7 +485,7 @@ export default function AdminDonHangPage() {
                         <th className="p-2.5 text-right">Thành tiền</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-slate-100">
                       {viewingOrder.ChiTietDonHangs?.map((ct, i) => (
                         <tr key={i}>
                           <td className="p-2.5 font-medium">{ct.SanPham?.TenSP || ct.MaSP}</td>
@@ -479,9 +503,9 @@ export default function AdminDonHangPage() {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center border-t border-gray-100 pt-3">
-                <span className="font-bold text-gray-600">Tổng thanh toán:</span>
-                <span className="text-base font-black text-gray-900">
+              <div className="flex justify-between items-center border-t border-slate-100 pt-3">
+                <span className="font-bold text-slate-600">Tổng thanh toán:</span>
+                <span className="text-base font-bold text-slate-900">
                   {Number(viewingOrder.TongTien).toLocaleString("vi-VN")} VNĐ
                 </span>
               </div>

@@ -94,7 +94,7 @@ export default function AccountPage() {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
         <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-orange-200 border-t-[#f66315]" />
-        <p className="mt-4 text-sm text-gray-500">Đang tải thông tin tài khoản...</p>
+        <p className="mt-4 text-sm text-slate-500">Đang tải thông tin tài khoản...</p>
       </div>
     );
   }
@@ -103,25 +103,22 @@ export default function AccountPage() {
     <div className="container mx-auto px-4 py-10">
       {/* Tieu de */}
       <div className="mb-8">
-        <h1 className="text-2xl font-black uppercase tracking-tight text-gray-900 sm:text-3xl">
+        <h1 className="text-2xl font-bold uppercase tracking-tight text-slate-900 sm:text-3xl">
           Quản lý tài khoản
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Cập nhật thông tin cá nhân và quản lý lịch sử mua hàng
-        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
         {/* ================= SIDEBAR MENU TRAI ================= */}
         <aside className="md:col-span-1">
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm space-y-1">
-            <div className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-4">
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm space-y-1">
+            <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 font-bold text-lg text-[#f66315]">
                 {customer?.hoTen.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold text-gray-900 text-sm">{customer?.hoTen}</p>
-                <p className="text-xs text-gray-500">{customer?.soDienThoai}</p>
+                <p className="truncate font-bold text-slate-900 text-sm">{customer?.hoTen}</p>
+                <p className="text-xs text-slate-500">{customer?.soDienThoai}</p>
               </div>
             </div>
 
@@ -135,13 +132,13 @@ export default function AccountPage() {
 
             <Link
               href="/tai-khoan/don-hang"
-              className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
             >
               <Package className="h-4 w-4" />
               Đơn hàng của tôi
             </Link>
 
-            <div className="border-t border-gray-100 pt-2">
+            <div className="border-t border-slate-100 pt-2">
               <button
                 type="button"
                 onClick={handleLogout}
@@ -156,73 +153,73 @@ export default function AccountPage() {
 
         {/* ================= CONTENT PHAI: FORM THONG TIN ================= */}
         <section className="md:col-span-3">
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 sm:p-8 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-4 mb-6">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 sm:p-8 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6">
               Thông tin khách hàng
             </h2>
 
             <form onSubmit={handleUpdate} className="space-y-5 max-w-xl">
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
                   Họ và tên
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={hoTen}
                     onChange={(e) => setHoTen(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
                   Số điện thoại đăng ký (Cố định)
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={customer?.soDienThoai || ""}
                     disabled
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm font-medium text-gray-500 cursor-not-allowed"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm font-medium text-slate-500 cursor-not-allowed"
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="mt-1 text-[11px] text-slate-400">
                   Số điện thoại được dùng làm tên đăng nhập tài khoản.
                 </p>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
                   Địa chỉ Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="email"
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
                   Địa chỉ giao hàng mặc định
                 </label>
                 <div className="relative">
-                  <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+                  <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                   <textarea
                     rows={3}
                     placeholder="Nhập địa chỉ nhận hàng của bạn..."
                     value={diaChi}
                     onChange={(e) => setDiaChi(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
               </div>
@@ -231,7 +228,7 @@ export default function AccountPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-2 rounded-xl bg-[#f66315] px-6 py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-orange-700 disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-[#f66315] px-6 py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-[#d4520f] disabled:opacity-50"
                 >
                   <Save className="h-4 w-4" />
                   {saving ? "Đang lưu thay đổi..." : "Cập nhật thông tin"}

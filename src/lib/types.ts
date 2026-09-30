@@ -155,7 +155,7 @@ export interface VoucherData {
 }
 
 // ---- Nhan Vien & Tai Khoan ----
-export type UserRole = "Admin" | "QuanLyKho" | "NhanVien" | "KhachHang";
+export type UserRole = "Admin" | "NhanVienKho" | "BanHang" | "KhachHang";
 
 export interface Employee {
   id: string;

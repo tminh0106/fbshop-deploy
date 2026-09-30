@@ -9,47 +9,44 @@
 Để chạy ứng dụng một cách tối ưu và không gặp lỗi, máy tính cần cài đặt:
 - **Node.js:** Phiên bản `>= 18.17.0` (Khuyến nghị Node.js 20.x LTS).
 - **Trình quản lý gói:** `npm` (đi kèm Node.js) hoặc `yarn` / `pnpm`.
-- **Hệ quản trị CSDL:** **Microsoft SQL Server** (bản Developer hoặc Express 2017/2019/2022) chạy trên cổng mặc định `1433`.
+- **Hệ quản trị CSDL:** **MySQL / MariaDB dùng chung** trên hosting (không cần cài CSDL trên máy cá nhân). Mọi thành viên kết nối cùng một CSDL nên dữ liệu luôn đồng bộ giữa các máy.
 - **Trình duyệt web:** Google Chrome, Microsoft Edge hoặc Firefox phiên bản mới nhất.
 
 ---
 
 ## 2. CẤU HÌNH BIẾN MÔI TRƯỜNG (.env)
-Tạo file `.env` tại thư mục gốc của dự án (`fbshop-web/.env`) với cấu hình chuỗi kết nối SQL Server:
+Tạo file `.env` tại thư mục gốc của dự án với chuỗi kết nối MySQL dùng chung:
 
 ```env
-# Chuỗi kết nối tới Microsoft SQL Server
-DATABASE_URL="sqlserver://localhost:1433;database=FBSHOP_DB;user=sa;password=YourPassword123;trustServerCertificate=true"
+# CSDL MySQL dùng chung - xin mật khẩu từ trưởng nhóm, KHÔNG đưa lên Git
+DATABASE_URL="mysql://dctcnynhhosting_yanhioidvn:<MAT_KHAU>@onehost-wphn092505.000nethost.com:3306/dctcnynhhosting_yanhioidvn"
 
 # Khóa bí mật ký xác thực JWT Token
 JWT_SECRET="fbshop_super_secret_jwt_key_2026_khoa_luan"
-
-# Cấu hình môi trường chạy
-NODE_ENV="development"
-PORT=3000
 ```
 
-> **Lưu ý:** Thay thế `user=sa` và `password=YourPassword123` theo đúng tài khoản SQL Server trên máy bạn.
+> **Lưu ý:**
+> - Mật khẩu có ký tự đặc biệt phải mã hóa URL: `@` → `%40`, `#` → `%23`, `%` → `%25`, `/` → `%2F`, `:` → `%3A`.
+> - File `.env` đã nằm trong `.gitignore`, gửi chuỗi kết nối cho thành viên qua kênh riêng.
 
 ---
 
 ## 3. CÁC BƯỚC KHỞI CHẠY DỰ ÁN (1-CLICK RUN)
 
-Mở terminal (PowerShell, Command Prompt hoặc Terminal trong VS Code) tại thư mục `fbshop-web`:
+Mở terminal (PowerShell, Command Prompt hoặc Terminal trong VS Code) tại thư mục dự án:
 
-### Bước 3.1: Cài đặt các thư viện phụ thuộc
+### Bước 3.1: Cài đặt thư viện và sinh Prisma Client
 ```bash
 npm install
+npx prisma generate
 ```
 
-### Bước 3.2: Đồng bộ cấu trúc CSDL (Prisma ORM)
-```bash
-# Đẩy schema 12 bảng vào SQL Server
-npx prisma db push
+### Bước 3.2: CSDL
+12 bảng đã được tạo sẵn trên CSDL dùng chung, **không cần** chạy `prisma db push` hay seed.
 
-# (Tùy chọn) Seed dữ liệu mẫu nếu DB đang trống
-npx prisma db seed
-```
+> ⚠️ **Khi cần sửa cấu trúc bảng** (đổi `schema.prisma`): chỉ một người thực hiện, và lưu ý máy chủ MariaDB mặc định tạo bảng MyISAM (không hỗ trợ transaction/khóa ngoại). Bảng mới phải chuyển sang InnoDB: `ALTER TABLE <TenBang> ENGINE=InnoDB;`
+>
+> Công cụ chuyển dữ liệu: `npm run db:export` (xuất CSDL hiện tại ra JSON) và `npm run db:import` (**xóa sạch** 12 bảng rồi nhập lại từ JSON), dùng khi cần chuyển sang CSDL khác.
 
 ### Bước 3.3: Khởi chạy Server phát triển (Localhost)
 ```bash
@@ -67,9 +64,9 @@ Hệ thống đã chuẩn bị sẵn 4 tài khoản phân quyền chuẩn xác t
 
 | Phân hệ / Vai trò | Tên đăng nhập / Identifier | Email dự phòng | Mật khẩu | Phạm vi quyền hạn theo thiết kế |
 | :--- | :--- | :--- | :---: | :--- |
-| **Admin Quản trị** | `admin` | `admin@fbshop.vn` | `123456` | Toàn quyền hệ thống: Xem doanh thu, quản lý nhân viên, duyệt đơn, cấu hình |
-| **Thủ kho (Kho bãi)** | `quanlykho` | `kho@fbshop.vn` | `123456` | Quản lý kho: Lập phiếu nhập (+tồn), lập phiếu xuất (-tồn), hủy phiếu theo BR-01 |
-| **Nhân viên Bán hàng** | `nhanvien` | `banhang@fbshop.vn` | `123456` | Xử lý đơn hàng: Tiếp nhận đơn mới, chuyển trạng thái giao hàng, xem thống kê cơ bản |
+| **Admin – Người quản lý** | `admin@gmail.com` | — | `123456` | Vai trò `Admin`: toàn quyền + nhà cung cấp, voucher, nhân viên, phân quyền tài khoản, báo cáo |
+| **Nhân viên kho** | `kho@gmail.com` | — | `123456` | Vai trò `NhanVienKho`: sản phẩm, hàng hóa kho, lập/hủy phiếu nhập–xuất (BR-01) |
+| **Nhân viên bán hàng** | `banhang@gmail.com` | — | `123456` | Vai trò `BanHang`: đơn hàng, khách hàng, sản phẩm |
 | **Khách hàng Mẫu** | `0912345678` | `khach@gmail.com` | `123456` | Khách mua hàng: Duyệt sản phẩm, đặt hàng COD/VNPAY, áp mã voucher, theo dõi đơn |
 
 ---
