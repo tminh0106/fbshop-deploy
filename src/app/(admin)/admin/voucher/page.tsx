@@ -13,6 +13,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Calendar,
+  RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { exportToExcel } from "@/lib/exportExcel";
@@ -60,7 +61,13 @@ function formatDisplayDateTime(date: Date | string) {
 export default function AdminVoucherPage() {
   const [vouchers, setVouchers] = useState<VoucherItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Bộ lọc & Tìm kiếm theo đặc tả
   const [keyword, setKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [dateError, setDateError] = useState("");
 
   const [showModal, setShowModal] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<VoucherItem | null>(null);
@@ -159,22 +166,65 @@ export default function AdminVoucherPage() {
     trangThai: "Active",
   });
 
-  const fetchVouchers = async () => {
+  const fetchVouchers = async (paramsOverride?: {
+    keyword?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) => {
+    const curKeyword = paramsOverride?.keyword !== undefined ? paramsOverride.keyword : keyword;
+    const curStatus = paramsOverride?.status !== undefined ? paramsOverride.status : statusFilter;
+    const curFromDate = paramsOverride?.fromDate !== undefined ? paramsOverride.fromDate : fromDate;
+    const curToDate = paramsOverride?.toDate !== undefined ? paramsOverride.toDate : toDate;
+
+    // A2 - Sai logic thời gian lọc: "Từ ngày" > "Đến ngày"
+    if (curFromDate && curToDate && new Date(curFromDate) > new Date(curToDate)) {
+      setDateError("Khoảng thời gian tìm kiếm không hợp lệ");
+      toast.error("Khoảng thời gian tìm kiếm không hợp lệ");
+      return;
+    } else {
+      setDateError("");
+    }
+
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (keyword) params.append("keyword", keyword);
+      if (curKeyword.trim()) params.append("keyword", curKeyword.trim());
+      if (curStatus && curStatus !== "ALL") params.append("status", curStatus);
+      if (curFromDate) params.append("fromDate", curFromDate);
+      if (curToDate) params.append("toDate", curToDate);
 
       const res = await fetch(`/api/admin/voucher?${params.toString()}`);
       const json = await res.json();
       if (res.ok) {
         setVouchers(json.data || []);
+      } else {
+        toast.error(json.error || "Lỗi khi tải voucher");
       }
     } catch {
       toast.error("Lỗi khi tải voucher");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchVouchers();
+  };
+
+  const handleResetFilter = () => {
+    setKeyword("");
+    setStatusFilter("ALL");
+    setFromDate("");
+    setToDate("");
+    setDateError("");
+    fetchVouchers({
+      keyword: "",
+      status: "ALL",
+      fromDate: "",
+      toDate: "",
+    });
   };
 
   useEffect(() => {
@@ -348,6 +398,113 @@ export default function AdminVoucherPage() {
         </div>
       </div>
 
+      {/* Search & Filter Bar - Bám sát đặc tả Tìm kiếm và lọc voucher */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
+        <form onSubmit={handleSearchSubmit} className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
+            {/* 1. Ô tìm kiếm từ khóa (Mã voucher / Loại) */}
+            <div className="md:col-span-4">
+              <label className="mb-1 block text-xs font-bold text-gray-700">
+                Tìm kiếm mã voucher
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Nhập mã voucher..."
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  className="h-[38px] w-full rounded-xl border border-gray-200 py-2 pl-9 pr-3 text-xs outline-none focus:border-[#f66315]"
+                />
+              </div>
+            </div>
+
+            {/* 2. Lọc theo trạng thái */}
+            <div className="md:col-span-3">
+              <label className="mb-1 block text-xs font-bold text-gray-700">
+                Trạng thái
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="h-[38px] w-full rounded-xl border border-gray-200 px-3 py-2 text-xs outline-none focus:border-[#f66315]"
+              >
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="Sắp diễn ra">Sắp diễn ra</option>
+                <option value="Đang hoạt động">Đang hoạt động</option>
+                <option value="Đã kết thúc">Đã kết thúc</option>
+                <option value="Đã vô hiệu hóa">Đã vô hiệu hóa</option>
+              </select>
+            </div>
+
+            {/* 3. Lọc theo thời gian: Từ ngày & Đến ngày */}
+            <div className="md:col-span-3">
+              <label className="mb-1 block text-xs font-bold text-gray-700">
+                Lọc theo thời gian
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    if (dateError) setDateError("");
+                  }}
+                  className={`h-[38px] w-full rounded-xl border p-2 text-xs outline-none transition-all ${
+                    dateError
+                      ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                      : "border-gray-200 focus:border-[#f66315]"
+                  }`}
+                  title="Từ ngày"
+                />
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => {
+                    setToDate(e.target.value);
+                    if (dateError) setDateError("");
+                  }}
+                  className={`h-[38px] w-full rounded-xl border p-2 text-xs outline-none transition-all ${
+                    dateError
+                      ? "border-red-500 bg-red-50/50 text-red-600 focus:ring-1 focus:ring-red-500"
+                      : "border-gray-200 focus:border-[#f66315]"
+                  }`}
+                  title="Đến ngày"
+                />
+              </div>
+            </div>
+
+            {/* 4. Nút Tìm kiếm & Đặt lại */}
+            <div className="flex items-center gap-2 md:col-span-2">
+              <button
+                type="submit"
+                className="flex-1 h-[38px] flex items-center justify-center gap-1.5 rounded-xl bg-[#f66315] py-2 px-3 text-xs font-bold text-white shadow-xs hover:bg-[#e55000] transition-all"
+              >
+                <Search className="h-3.5 w-3.5" />
+                Tìm kiếm
+              </button>
+              <button
+                type="button"
+                onClick={handleResetFilter}
+                className="h-[38px] flex items-center justify-center gap-1 rounded-xl border border-gray-300 bg-white py-2 px-3 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                title="Đặt lại bộ lọc (Clear filter)"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Đặt lại
+              </button>
+            </div>
+          </div>
+
+          {/* A2 - Cảnh báo đỏ: Khoảng thời gian tìm kiếm không hợp lệ */}
+          {dateError && (
+            <p className="text-xs font-bold text-red-600 flex items-center gap-1">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              {dateError}
+            </p>
+          )}
+        </form>
+      </div>
+
       {/* Table */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
@@ -373,8 +530,16 @@ export default function AdminVoucherPage() {
                 </tr>
               ) : vouchers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400 font-medium">
-                    Chưa có mã khuyến mại nào
+                  <td colSpan={8} className="py-12 text-center text-gray-500 font-medium">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Tag className="h-8 w-8 text-gray-300" />
+                      <p className="text-sm font-bold text-gray-700">
+                        Không tìm thấy mã giảm giá phù hợp
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Vui lòng thử lại với từ khóa hoặc tiêu chí lọc khác
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (

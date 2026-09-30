@@ -127,3 +127,17 @@ export async function getCurrentAdmin(tokenParam?: string): Promise<AdminTokenPa
     return null;
   }
 }
+
+/**
+ * Kiem tra quyen cho API Route
+ */
+export async function requireRoles(allowedRoles: string[]) {
+  const admin = await getCurrentAdmin();
+  if (!admin) {
+    return { error: "Chưa đăng nhập", status: 401 };
+  }
+  if (!allowedRoles.includes(admin.role)) {
+    return { error: "Bạn không có quyền thực hiện thao tác này", status: 403 };
+  }
+  return { user: admin, status: 200 };
+}

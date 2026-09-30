@@ -13,7 +13,7 @@ function parseJwt(token: string) {
   }
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const adminToken = request.cookies.get("fbshop_admin_token")?.value;
@@ -34,6 +34,25 @@ export function proxy(request: NextRequest) {
     if (!adminPayload || !adminPayload.role) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
+      return NextResponse.redirect(url);
+    }
+
+    // --- PHAN QUYEN THEO ROLE ---
+    const role = adminPayload.role;
+
+    // Admin-only routes
+    const adminOnlyRoutes = ["/admin/nhan-vien", "/admin/tai-khoan", "/admin/thong-ke"];
+    if (adminOnlyRoutes.some(r => pathname.startsWith(r)) && role !== "Admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/don-hang";
+      return NextResponse.redirect(url);
+    }
+
+    // Kho-routes (Admin & QuanLyKho only)
+    const khoRoutes = ["/admin/hoa-don-kho", "/admin/hang-hoa-kho"];
+    if (khoRoutes.some(r => pathname.startsWith(r)) && role !== "Admin" && role !== "QuanLyKho") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/don-hang";
       return NextResponse.redirect(url);
     }
   }

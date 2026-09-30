@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, requireRoles } from "@/lib/auth";
 
 // GET: Danh sach tai khoan
 export async function GET() {
   try {
+    const authCheck = await requireRoles(["Admin"]);
+    if (authCheck.error) {
+      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    }
+
     const accounts = await prisma.taiKhoan.findMany({
       include: {
         NhanVien: true,
@@ -22,6 +27,11 @@ export async function GET() {
 // POST: Tao tai khoan moi
 export async function POST(request: Request) {
   try {
+    const authCheck = await requireRoles(["Admin"]);
+    if (authCheck.error) {
+      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    }
+
     const body = await request.json();
     const { tenDangNhap, matKhau, phanQuyen, maNV } = body;
 
@@ -60,6 +70,11 @@ export async function POST(request: Request) {
 // PUT: Cap nhat / Mo khoa / Doi mat khau
 export async function PUT(request: Request) {
   try {
+    const authCheck = await requireRoles(["Admin"]);
+    if (authCheck.error) {
+      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    }
+
     const body = await request.json();
     const { maTK, phanQuyen, trangThai, matKhauMoi } = body;
 
@@ -93,6 +108,11 @@ export async function PUT(request: Request) {
 // DELETE: Xoa tai khoan
 export async function DELETE(request: Request) {
   try {
+    const authCheck = await requireRoles(["Admin"]);
+    if (authCheck.error) {
+      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    }
+
     const { searchParams } = new URL(request.url);
     const maTK = searchParams.get("maTK");
 

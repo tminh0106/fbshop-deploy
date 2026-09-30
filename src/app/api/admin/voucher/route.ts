@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 
-// GET: Danh sach voucher
+// GET: Danh sach voucher (Ho tro tim kiem va loc theo dac ta)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const keyword = searchParams.get("keyword")?.trim();
+    const status = searchParams.get("status")?.trim();
+    const fromDate = searchParams.get("fromDate")?.trim();
+    const toDate = searchParams.get("toDate")?.trim();
+
+    // Kiem tra logic thoi gian loc (A2: Tu ngay > Den ngay)
+    if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
+      return NextResponse.json(
+        { error: "Khoảng thời gian tìm kiếm không hợp lệ" },
+        { status: 400 }
+      );
+    }
 
     const where: any = {};
     if (keyword) {
@@ -13,6 +24,15 @@ export async function GET(request: Request) {
         { MaVoucher: { contains: keyword } },
         { LoaiGiamGia: { contains: keyword } },
       ];
+    }
+
+    if (fromDate) {
+      where.NgayKetThuc = { gte: new Date(fromDate) };
+    }
+    if (toDate) {
+      const endOfDay = new Date(toDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      where.NgayBatDau = { lte: endOfDay };
     }
 
     const vouchers = await prisma.voucher.findMany({
@@ -25,7 +45,34 @@ export async function GET(request: Request) {
       orderBy: { NgayBatDau: "desc" },
     });
 
-    return NextResponse.json({ success: true, data: vouchers });
+    const now = new Date();
+    // Loc theo trang thai vong doi (Sap dien ra, Dang hoat dong, Da ket thuc, Da vo hieu hoa)
+    let filtered = vouchers;
+    if (status && status !== "ALL" && status !== "Tất cả") {
+      filtered = vouchers.filter((v) => {
+        const isDis = v.TrangThai === "Disabled";
+        const start = new Date(v.NgayBatDau);
+        const end = new Date(v.NgayKetThuc);
+
+        if (status === "Đã vô hiệu hóa" || status === "Disabled") {
+          return isDis;
+        }
+        if (isDis) return false;
+
+        if (status === "Sắp diễn ra" || status === "Upcoming") {
+          return now < start;
+        }
+        if (status === "Đã kết thúc" || status === "Expired") {
+          return now > end;
+        }
+        if (status === "Đang hoạt động" || status === "Active") {
+          return now >= start && now <= end;
+        }
+        return true;
+      });
+    }
+
+    return NextResponse.json({ success: true, data: filtered });
   } catch (error: any) {
     console.error("GET voucher error:", error);
     return NextResponse.json({ error: "Lỗi tải danh sách voucher" }, { status: 500 });
