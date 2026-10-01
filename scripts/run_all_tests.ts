@@ -263,8 +263,9 @@ async function main() {
   }
 
   // TC-PROD-02: Hiển thị đúng thông tin sản phẩm
+  // (lấy đủ danh sách: mặc định API chỉ trả trang đầu 12 sản phẩm)
   try {
-    const res = await fetch(`${BASE_URL}/api/san-pham`);
+    const res = await fetch(`${BASE_URL}/api/san-pham?limit=100`);
     const data = await res.json();
     const p = data.products?.find((item: any) => item.id === "SP_AX88D");
     const passed = p && p.name && p.price > 0 && p.stock >= 0;
@@ -294,7 +295,7 @@ async function main() {
       },
     });
 
-    const res = await fetch(`${BASE_URL}/api/san-pham`);
+    const res = await fetch(`${BASE_URL}/api/san-pham?limit=100`);
     const data = await res.json();
     const found = data.products?.some((item: any) => item.id === dummyId);
     const passed = !found;
@@ -386,7 +387,7 @@ async function main() {
 
   // TC-PROD-08: Hiển thị đúng ảnh sản phẩm
   try {
-    const res = await fetch(`${BASE_URL}/api/san-pham`);
+    const res = await fetch(`${BASE_URL}/api/san-pham?limit=100`);
     const data = await res.json();
     const allValidImg = data.products?.every((p: any) => !!p.imageUrl && p.imageUrl.length > 3);
     record(
@@ -435,7 +436,7 @@ async function main() {
 
   // TC-PROD-10: Dữ liệu mô tả thiếu vẫn không vỡ layout
   try {
-    const res = await fetch(`${BASE_URL}/api/san-pham`);
+    const res = await fetch(`${BASE_URL}/api/san-pham?limit=100`);
     const data = await res.json();
     const allHaveKeys = data.products?.every((p: any) => "id" in p && "name" in p && "price" in p);
     record(

@@ -9,6 +9,9 @@ import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/lib/cartStore";
 import toast from "react-hot-toast";
 
+// Giay, balo, phu kien khong can ghi chu cang cuoc
+const NON_RACKET_CATEGORIES = ["DM_GIAY", "DM_BALO", "DM_PHUKIEN", "giay-cau-long", "balo-bao-vot", "phu-kien"];
+
 interface ProductDetail {
   id: string;
   name: string;
@@ -210,8 +213,8 @@ export default function ProductDetailPage({
               )}
             </div>
 
-            {/* Ghi chu cang cuoc */}
-            {!isOutOfStock && (
+            {/* Ghi chu cang cuoc: chi ap dung cho vot */}
+            {!isOutOfStock && !NON_RACKET_CATEGORIES.includes(product.category?.id || "") && (
               <div className="mt-6">
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
                   Yêu cầu căng cước bổ sung (tùy chọn)

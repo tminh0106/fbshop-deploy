@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UserPlus, User, Phone, Mail, MapPin, Lock, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
+import { EMAIL_ERROR, EMAIL_REGEX } from "@/lib/validation";
 
 function RegisterForm() {
   const router = useRouter();
@@ -33,11 +34,10 @@ function RegisterForm() {
       errs.soDienThoai = "Số điện thoại phải gồm đúng 10 số và bắt đầu bằng số 0";
     }
 
-    if (email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        errs.email = "Email không hợp lệ";
-      }
+    if (!email.trim()) {
+      errs.email = "Email không được để trống";
+    } else if (!EMAIL_REGEX.test(email.trim())) {
+      errs.email = EMAIL_ERROR;
     }
 
     if (!matKhau) {
@@ -69,7 +69,7 @@ function RegisterForm() {
         body: JSON.stringify({
           hoTen: hoTen.trim(),
           soDienThoai: soDienThoai.trim(),
-          email: email.trim() || undefined,
+          email: email.trim(),
           diaChi: diaChi.trim() || undefined,
           matKhau,
           xacNhanMatKhau,
@@ -157,12 +157,13 @@ function RegisterForm() {
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Email (tùy chọn)
+                Email <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="email"
+                  autoComplete="email"
                   placeholder="name@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -202,6 +203,7 @@ function RegisterForm() {
                 <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Tối thiểu 6 ký tự"
                   value={matKhau}
                   onChange={(e) => setMatKhau(e.target.value)}
@@ -223,6 +225,7 @@ function RegisterForm() {
                 <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Nhập lại mật khẩu"
                   value={xacNhanMatKhau}
                   onChange={(e) => setXacNhanMatKhau(e.target.value)}

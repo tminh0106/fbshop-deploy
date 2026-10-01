@@ -2,6 +2,7 @@ import Link from "next/link";
 import prisma from "@/lib/db";
 import { getCurrentAdmin } from "@/lib/auth";
 import { hasFeature } from "@/lib/permissions";
+import { orderStatusLabel } from "@/lib/orderStatus";
 import {
   Package,
   ShoppingCart,
@@ -17,6 +18,20 @@ import {
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+// Nhan + mau trang thai don hang (ma luu khong dau trong CSDL)
+const ORDER_BADGE: Record<string, string> = {
+  "Cho thanh toan": "bg-purple-50 border-purple-200 text-purple-700",
+  "Cho xac nhan": "bg-amber-50 border-amber-200 text-amber-700",
+  "Dang xu ly": "bg-blue-50 border-blue-200 text-blue-700",
+  "Dang giao": "bg-orange-50 border-orange-200 text-orange-700",
+  "Da giao": "bg-emerald-50 border-emerald-200 text-emerald-700",
+  "Da huy": "bg-red-50 border-red-200 text-red-600",
+};
+
+// Don vi tinh theo danh muc: vot -> cay, giay -> doi, con lai -> chiec
+const stockUnit = (maDanhMuc: string | null | undefined) =>
+  maDanhMuc === "DM_GIAY" ? "đôi" : maDanhMuc === "DM_BALO" || maDanhMuc === "DM_PHUKIEN" || !maDanhMuc ? "chiếc" : "cây";
 
 const STAT_GRID_COLS = ["", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3", "lg:grid-cols-4"];
 
@@ -221,8 +236,12 @@ export default async function AdminDashboard() {
                         {Number(o.TongTien).toLocaleString("vi-VN")} đ
                       </td>
                       <td className="px-5 py-3 text-center">
-                        <span className="rounded-full bg-orange-50 border border-orange-200 px-2.5 py-0.5 text-[10px] font-bold text-orange-700">
-                          {o.TrangThai}
+                        <span
+                          className={`whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+                            ORDER_BADGE[o.TrangThai] || "bg-slate-50 border-slate-200 text-slate-600"
+                          }`}
+                        >
+                          {orderStatusLabel(o.TrangThai)}
                         </span>
                       </td>
                     </tr>
@@ -243,7 +262,7 @@ export default async function AdminDashboard() {
               CẢNH BÁO TỒN KHO
             </h3>
             <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-              ≤ 5 CÂY
+              Tồn ≤ 5
             </span>
           </div>
 
@@ -264,7 +283,7 @@ export default async function AdminDashboard() {
                   </div>
                   <div className="text-right">
                     <span className="text-xs font-bold text-red-600">
-                      Còn {p.SoLuong} cây
+                      Còn {p.SoLuong} {stockUnit(p.MaDanhMuc)}
                     </span>
                     <Link
                       href="/admin/hoa-don-kho"
@@ -314,7 +333,7 @@ export default async function AdminDashboard() {
                       : "bg-blue-100 text-blue-700"
                   }`}
                 >
-                  {inv.LoaiPhieu}
+                  {inv.LoaiPhieu === "NHAP" ? "Nhập kho" : "Xuất kho"}
                 </span>
               </div>
               <p className="text-xs font-bold text-slate-800">

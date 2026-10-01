@@ -6,6 +6,9 @@ import ProductCard from "@/components/ProductCard";
 import type { ProductItem, Category } from "@/lib/types";
 import { Filter, RotateCcw, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 
+// Danh muc khong phai vot: an bo loc trong luong
+const NON_RACKET_CATEGORIES = ["DM_GIAY", "DM_BALO", "DM_PHUKIEN", "giay-cau-long", "balo-bao-vot", "phu-kien"];
+
 function ProductCatalog() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -139,6 +142,8 @@ function ProductCatalog() {
                       checked={selectedCategory === cat.id}
                       onChange={() => {
                         setSelectedCategory(cat.id);
+                        // Giay / balo / phu kien khong co trong luong vot -> bo loc trong luong
+                        if (NON_RACKET_CATEGORIES.includes(cat.id)) setSelectedWeight("");
                         setCurrentPage(1);
                       }}
                       className="accent-[#f66315]"
@@ -172,7 +177,8 @@ function ProductCatalog() {
               </div>
             </div>
 
-            {/* Loc theo Trong luong */}
+            {/* Loc theo Trong luong (chi hien khi xem vot) */}
+            {!NON_RACKET_CATEGORIES.includes(selectedCategory) && (
             <div className="border-t border-slate-100 pt-5">
               <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-700">
                 Trọng lượng vợt
@@ -197,6 +203,7 @@ function ProductCatalog() {
                 ))}
               </div>
             </div>
+            )}
 
             {/* Nut hanh dong bo loc */}
             <button

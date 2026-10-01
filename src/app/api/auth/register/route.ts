@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { hashPassword, generateToken } from "@/lib/auth";
+import { EMAIL_ERROR, EMAIL_REGEX } from "@/lib/validation";
+
+// Bang 3.38 / FR-04: bat buoc Ho ten, SDT, Email, Mat khau; chan trung SDT va Email
 
 export async function POST(request: Request) {
   try {
@@ -20,11 +23,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (email && email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        return NextResponse.json({ error: "Email không đúng định dạng" }, { status: 400 });
-      }
+    const emailValue = typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!emailValue) {
+      return NextResponse.json({ error: "Email không được để trống" }, { status: 400 });
+    }
+    if (emailValue.length > 100 || !EMAIL_REGEX.test(emailValue)) {
+      return NextResponse.json({ error: EMAIL_ERROR }, { status: 400 });
     }
 
     if (!matKhau || matKhau.length < 6) {
@@ -44,6 +48,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Số điện thoại đã được sử dụng" }, { status: 409 });
     }
 
+    // Trung email (Bang 3.38 - luong phu)
+    const emailTaken = await prisma.khachHang.findFirst({ where: { Email: emailValue } });
+    if (emailTaken) {
+      return NextResponse.json({ error: "Email đã được sử dụng" }, { status: 409 });
+    }
+
     // Hash mat khau
     const hashedPassword = await hashPassword(matKhau);
 
@@ -52,7 +62,7 @@ export async function POST(request: Request) {
       data: {
         HoTen: hoTen.trim(),
         SoDienThoai: soDienThoai.trim(),
-        Email: email?.trim() || null,
+        Email: emailValue,
         DiaChi: diaChi?.trim() || null,
         MatKhau: hashedPassword,
       },
