@@ -17,6 +17,9 @@ import {
   Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 import { exportToExcel } from "@/lib/exportExcel";
 import { normalizeRole, ROLE_LABELS } from "@/lib/permissions";
 
@@ -41,6 +44,7 @@ const PHONE_REGEX = /^0\d{9}$/;
 const EMAIL_REGEX = /^[a-zA-Z0-9]+([._-][a-zA-Z0-9]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
 
 export default function AdminNhanVienPage() {
+  const [page, setPage] = useState(1);
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
@@ -269,6 +273,11 @@ export default function AdminNhanVienPage() {
     toast.success("Đã xuất danh sách nhân viên ra Excel!");
   };
 
+  // Phan trang: sau khi sua/xoa van giu trang hien tai, tu lui ve trang cuoi neu het dong
+  const pageCount = Math.max(1, Math.ceil(employees.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedRows = employees.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       {/* Header Bar */}
@@ -303,6 +312,7 @@ export default function AdminNhanVienPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            setPage(1);
             fetchEmployees();
           }}
           className="flex gap-3"
@@ -359,7 +369,7 @@ export default function AdminNhanVienPage() {
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => {
+                pagedRows.map((emp) => {
                   const isRetired = emp.TrangThai === "Da nghi viec";
 
                   return (
@@ -453,6 +463,9 @@ export default function AdminNhanVienPage() {
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={employees.length} unit="nhân viên" onChange={setPage} />
+        )}
       </div>
 
       {/* Modal Thêm / Sửa Nhân Viên (Đặc tả Bước 6) */}

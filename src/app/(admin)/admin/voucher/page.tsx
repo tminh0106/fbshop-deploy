@@ -16,6 +16,9 @@ import {
   RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 import { exportToExcel } from "@/lib/exportExcel";
 
 interface VoucherItem {
@@ -59,6 +62,7 @@ function formatDisplayDateTime(date: Date | string) {
 }
 
 export default function AdminVoucherPage() {
+  const [page, setPage] = useState(1);
   const [vouchers, setVouchers] = useState<VoucherItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -210,6 +214,7 @@ export default function AdminVoucherPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
     fetchVouchers();
   };
 
@@ -365,6 +370,11 @@ export default function AdminVoucherPage() {
     exportToExcel(dataToExport, "DanhSachVoucher_FBShop", "Voucher");
     toast.success("Đã xuất danh sách Voucher ra Excel!");
   };
+
+  // Phan trang: sau khi sua/xoa van giu trang hien tai, tu lui ve trang cuoi neu het dong
+  const pageCount = Math.max(1, Math.ceil(vouchers.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedRows = vouchers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -540,7 +550,7 @@ export default function AdminVoucherPage() {
                   </td>
                 </tr>
               ) : (
-                vouchers.map((v) => {
+                pagedRows.map((v) => {
                   const isUsed = (v._count?.DonHangs || 0) > 0;
                   const isDisabled = v.TrangThai === "Disabled";
                   
@@ -656,6 +666,9 @@ export default function AdminVoucherPage() {
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={vouchers.length} unit="voucher" onChange={setPage} />
+        )}
       </div>
 
       {/* Modal Them / Sua Voucher */}

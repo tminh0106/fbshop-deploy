@@ -28,9 +28,12 @@ interface OrderInfo {
   coTheHuy: boolean;
 }
 
-const BANK_NAME = "Vietcombank";
-const ACCOUNT_NUMBER = "1234567890";
-const ACCOUNT_HOLDER = "FBSHOP";
+// Tai khoan nhan tien cua cua hang (VietQR tu sinh ma theo tung don: so tien + noi dung)
+const BANK_NAME = "TPBank";
+const BANK_BIN = "970423"; // ma ngan hang TPBank theo chuan VietQR / NAPAS
+const ACCOUNT_NUMBER = "93663666888";
+const ACCOUNT_HOLDER = "NGUYEN HOANG TUAN MINH"; // ten that tren tai khoan (app ngan hang se hien ten nay)
+const RECEIVER_NAME = "FBSHOP NGUYEN TRAI"; // ten don vi nhan hien tren trang
 const POLL_MS = 5000;
 const CANCEL_REASONS = ["Đổi ý, không muốn mua nữa", "Muốn đổi phương thức thanh toán", "Muốn thay đổi sản phẩm / số lượng", "Lý do khác"];
 
@@ -177,7 +180,7 @@ function PaymentQRContent() {
   }
 
   const transferContent = `FBSHOP ${order.maDH}`;
-  const qrUrl = `https://img.vietqr.io/image/${BANK_NAME}-${ACCOUNT_NUMBER}-compact.png?amount=${order.tongTien}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(ACCOUNT_HOLDER)}`;
+  const qrUrl = `https://img.vietqr.io/image/${BANK_BIN}-${ACCOUNT_NUMBER}-compact2.png?amount=${order.tongTien}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(ACCOUNT_HOLDER)}`;
   const deadline = order.hanThanhToan ? new Date(order.hanThanhToan) : null;
   const remaining = deadline ? deadline.getTime() - now : 0;
   const reported = !!order.ngayBaoChuyenKhoan;
@@ -232,7 +235,7 @@ function PaymentQRContent() {
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 items-center">
           <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
-            <div className="relative aspect-square w-64 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+            <div className="relative aspect-[27/32] w-64 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrUrl} alt="Mã VietQR" className="h-full w-full object-contain" />
             </div>
@@ -248,7 +251,10 @@ function PaymentQRContent() {
             {copyRow("Số tài khoản", ACCOUNT_NUMBER)}
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <p className="text-[11px] text-slate-400">Chủ tài khoản</p>
-              <p className="text-sm font-bold text-slate-800">{ACCOUNT_HOLDER}</p>
+              <p className="text-sm font-bold text-slate-800">{RECEIVER_NAME}</p>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                Tên hiển thị trên app ngân hàng: <span className="font-semibold">{ACCOUNT_HOLDER}</span>
+              </p>
             </div>
             {copyRow("Số tiền", String(order.tongTien), <p className="text-base font-extrabold text-[#f66315]">{formatCurrency(order.tongTien)}</p>)}
             {copyRow("Nội dung", transferContent)}

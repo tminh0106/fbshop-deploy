@@ -15,6 +15,30 @@ import {
 import toast from "react-hot-toast";
 import { exportToExcel } from "@/lib/exportExcel";
 import ProductImageInput from "@/components/admin/ProductImageInput";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
+// Thu tu nhom: vot cac hang -> balo -> phu kien -> giay
+const CATEGORY_ORDER = ["DM_YONEX", "DM_LINING", "DM_VICTOR", "DM_MIZUNO", "DM_BALO", "DM_PHUKIEN", "DM_GIAY"];
+// Thu tu hang trong cung nhom (doc tu ten san pham)
+const BRAND_ORDER = ["yonex", "lining", "victor", "mizuno"];
+
+const categoryRank = (maDanhMuc: string) => {
+  const i = CATEGORY_ORDER.indexOf(maDanhMuc);
+  return i < 0 ? CATEGORY_ORDER.length : i;
+};
+const brandRank = (tenSP: string) => {
+  const name = tenSP.toLowerCase().replace("li-ning", "lining");
+  const i = BRAND_ORDER.findIndex((b) => name.includes(b));
+  return i < 0 ? BRAND_ORDER.length : i;
+};
+const sortProducts = <T extends { MaDanhMuc: string; TenSP: string }>(list: T[]) =>
+  [...list].sort(
+    (a, b) =>
+      categoryRank(a.MaDanhMuc) - categoryRank(b.MaDanhMuc) ||
+      brandRank(a.TenSP) - brandRank(b.TenSP) ||
+      a.TenSP.localeCompare(b.TenSP, "vi")
+  );
 
 interface ProductItem {
   MaSP: string;
@@ -43,6 +67,7 @@ export default function AdminSanPhamPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [selectedCat, setSelectedCat] = useState("ALL");
+  const [page, setPage] = useState(1);
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -58,6 +83,11 @@ export default function AdminSanPhamPage() {
     maDanhMuc: "DM_YONEX",
   });
 
+  // Phan trang: sau khi sua/xoa van giu trang hien tai, tu lui ve trang cuoi neu het dong
+  const pageCount = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedProducts = products.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
@@ -68,7 +98,7 @@ export default function AdminSanPhamPage() {
       const res = await fetch(`/api/admin/san-pham?${params.toString()}`);
       const json = await res.json();
       if (res.ok) {
-        setProducts(json.data || []);
+        setProducts(sortProducts(json.data || []));
       }
     } catch {
       toast.error("Lỗi khi tải danh sách sản phẩm");
@@ -243,6 +273,7 @@ export default function AdminSanPhamPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            setPage(1);
             fetchProducts();
           }}
           className="grid grid-cols-1 gap-3 md:grid-cols-4"
@@ -314,7 +345,7 @@ export default function AdminSanPhamPage() {
                   </td>
                 </tr>
               ) : (
-                products.map((p) => {
+                pagedProducts.map((p) => {
                   const isStopped = p.MoTa?.includes("[NGỪNG KINH DOANH]");
                   const hasHistory =
                     (p._count?.ChiTietDonHangs || 0) > 0 ||
@@ -404,6 +435,9 @@ export default function AdminSanPhamPage() {
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={products.length} unit="sản phẩm" onChange={setPage} />
+        )}
       </div>
 
       {/* Modal Them / Sua San Pham */}

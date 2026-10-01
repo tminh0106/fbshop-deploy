@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { UserCog, PlusCircle, Search, Lock, Unlock, Trash2, Edit2, ShieldCheck, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 import { isStaffRole, normalizeRole, ROLE_LABELS, ROLE_OPTIONS, ROLES } from "@/lib/permissions";
 
 // =======================================================
@@ -38,6 +41,7 @@ const inputClass = (error?: string) =>
   `${inputBase} ${error ? "border-red-400 bg-red-50/40 focus:border-red-500" : "border-slate-200 focus:border-[#f66315]"}`;
 
 export default function AdminTaiKhoanPage() {
+  const [page, setPage] = useState(1);
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [currentMaTK, setCurrentMaTK] = useState("");
@@ -260,6 +264,11 @@ export default function AdminTaiKhoanPage() {
     }
   };
 
+  // Phan trang: sau khi sua/xoa van giu trang hien tai, tu lui ve trang cuoi neu het dong
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       {/* Tieu de */}
@@ -286,13 +295,19 @@ export default function AdminTaiKhoanPage() {
               type="text"
               placeholder="Tìm theo tên đăng nhập, mã tài khoản, tên hoặc mã nhân viên..."
               value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              onChange={(e) => {
+                setKeyword(e.target.value);
+                setPage(1);
+              }}
               className="w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-xs outline-none focus:border-[#f66315]"
             />
           </div>
           <select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(1);
+            }}
             className="rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#f66315]"
           >
             <option value="">Tất cả vai trò</option>
@@ -304,7 +319,10 @@ export default function AdminTaiKhoanPage() {
           </select>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#f66315]"
           >
             <option value="">Tất cả trạng thái</option>
@@ -354,7 +372,7 @@ export default function AdminTaiKhoanPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((acc) => {
+                pagedRows.map((acc) => {
                   const locked = isLockedStatus(acc.TrangThai);
                   const isSelf = acc.MaTK === currentMaTK;
                   const role = normalizeRole(acc.PhanQuyen) || "";
@@ -444,6 +462,9 @@ export default function AdminTaiKhoanPage() {
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={filtered.length} unit="tài khoản" onChange={setPage} />
+        )}
       </div>
 
       {/* Modal them tai khoan (Bang 3.48) */}

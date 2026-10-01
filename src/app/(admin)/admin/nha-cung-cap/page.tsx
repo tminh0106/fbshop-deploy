@@ -13,6 +13,9 @@ import {
   Mail,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 import { exportToExcel } from "@/lib/exportExcel";
 import { EMAIL_ERROR, EMAIL_REGEX, PHONE_ERROR, PHONE_REGEX, TAX_CODE_ERROR, TAX_CODE_REGEX } from "@/lib/validation";
 
@@ -31,6 +34,7 @@ interface NCCItem {
 }
 
 export default function AdminNhaCungCapPage() {
+  const [page, setPage] = useState(1);
   const [suppliers, setSuppliers] = useState<NCCItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
@@ -195,6 +199,11 @@ export default function AdminNhaCungCapPage() {
     toast.success("Đã xuất danh sách nhà cung cấp ra Excel!");
   };
 
+  // Phan trang: sau khi sua/xoa van giu trang hien tai, tu lui ve trang cuoi neu het dong
+  const pageCount = Math.max(1, Math.ceil(suppliers.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedRows = suppliers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       {/* Header Bar */}
@@ -229,6 +238,7 @@ export default function AdminNhaCungCapPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            setPage(1);
             fetchSuppliers();
           }}
           className="flex gap-3"
@@ -283,7 +293,7 @@ export default function AdminNhaCungCapPage() {
                   </td>
                 </tr>
               ) : (
-                suppliers.map((s) => {
+                pagedRows.map((s) => {
                   const isStopped = s.TrangThai === "Ngung hop tac";
 
                   return (
@@ -355,6 +365,9 @@ export default function AdminNhaCungCapPage() {
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={suppliers.length} unit="nhà cung cấp" onChange={setPage} />
+        )}
       </div>
 
       {/* Modal Them / Sua NCC */}

@@ -76,7 +76,8 @@ export async function GET(request: Request) {
 
     // 4. Trong luong (3U, 4U, 5U)
     if (weightParam && weightParam.trim()) {
-      andConditions.push({ TrongLuong: weightParam.trim() });
+      // Mot so mau co nhieu phien ban trong luong (vd "4U/5U") -> loc theo "co chua"
+      andConditions.push({ TrongLuong: { contains: weightParam.trim() } });
     }
 
     const where: any = { AND: andConditions };

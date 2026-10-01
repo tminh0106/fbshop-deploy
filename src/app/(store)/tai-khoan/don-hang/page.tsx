@@ -19,6 +19,10 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { paymentStatusLabel } from "@/lib/orderStatus";
 import toast from "react-hot-toast";
+import Pagination from "@/components/admin/Pagination";
+
+// Moi don chiem nhieu cho -> 5 don / trang
+const PAGE_SIZE = 5;
 
 interface OrderDetailItem {
   productId: string;
@@ -58,6 +62,7 @@ const CANCEL_REASONS = [
 export default function MyOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<OrderData[]>([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [cancelling, setCancelling] = useState<OrderData | null>(null);
@@ -177,6 +182,11 @@ export default function MyOrdersPage() {
     );
   };
 
+  // Phan trang danh sach don
+  const pageCount = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedOrders = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
@@ -254,7 +264,7 @@ export default function MyOrdersPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {orders.map((order) => {
+              {pagedOrders.map((order) => {
                 const isExpanded = expandedOrders[order.id];
                 return (
                   <div
@@ -394,6 +404,18 @@ export default function MyOrdersPage() {
                   </div>
                 );
               })}
+              <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                <Pagination
+                  page={currentPage}
+                  pageSize={PAGE_SIZE}
+                  total={orders.length}
+                  unit="đơn hàng"
+                  onChange={(p) => {
+                    setPage(p);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                />
+              </div>
             </div>
           )}
         </section>

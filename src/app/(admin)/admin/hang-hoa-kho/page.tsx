@@ -13,6 +13,9 @@ import {
   Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 import { exportToExcel } from "@/lib/exportExcel";
 
 interface HangHoaKhoItem {
@@ -54,6 +57,7 @@ const LOW_STOCK = 5;
 const toDateInput = (d: string | null) => (d ? new Date(d).toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }) : "");
 
 export default function HangHoaKhoPage() {
+  const [page, setPage] = useState(1);
   const [items, setItems] = useState<HangHoaKhoItem[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,6 +217,11 @@ export default function HangHoaKhoPage() {
   const inputCls =
     "w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#f66315] disabled:bg-slate-100 disabled:text-slate-500";
 
+  // Phan trang: sau khi sua/xoa van giu trang hien tai, tu lui ve trang cuoi neu het dong
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedRows = items.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       {/* Header Bar */}
@@ -245,6 +254,7 @@ export default function HangHoaKhoPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            setPage(1);
             fetchItems();
           }}
           className="flex gap-3"
@@ -301,7 +311,7 @@ export default function HangHoaKhoPage() {
                   </td>
                 </tr>
               ) : (
-                items.map((item) => {
+                pagedRows.map((item) => {
                   const isLow = (item.SanPham?.SoLuong || 0) <= LOW_STOCK;
                   return (
                     <tr key={item.MaHangHoa} className="hover:bg-slate-50/60 transition-colors">
@@ -370,6 +380,9 @@ export default function HangHoaKhoPage() {
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={items.length} unit="lô hàng" onChange={setPage} />
+        )}
       </div>
 
       {/* Modal them / sua */}

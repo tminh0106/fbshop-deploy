@@ -16,11 +16,10 @@ import {
   Printer,
   Wallet,
   X,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { exportToExcel } from "@/lib/exportExcel";
+import Pagination from "@/components/admin/Pagination";
 import {
   NGHIEP_VU_XUAT,
   WAREHOUSES,
@@ -75,19 +74,6 @@ interface LineItem {
 type PayMode = "FULL" | "DEBT" | "PART";
 
 const PAGE_SIZE = 10;
-
-// Danh sach so trang hien thi: 1 … 4 5 6 … 12
-function pageNumbers(current: number, total: number): (number | "...")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const pages: (number | "...")[] = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  if (start > 2) pages.push("...");
-  for (let p = start; p <= end; p++) pages.push(p);
-  if (end < total - 1) pages.push("...");
-  pages.push(total);
-  return pages;
-}
 
 const SEARCH_FORBIDDEN = /[<>{}[\]\\;'"`=%$^*|~]/;
 const money = (n: number | string) => `${Number(n || 0).toLocaleString("vi-VN")} đ`;
@@ -641,49 +627,8 @@ export default function HoaDonKhoPage() {
           </table>
         </div>
 
-        {/* Phan trang */}
-        {!loading && invoices.length > 0 && (
-          <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-600 sm:flex-row">
-            <p>
-              Hiển thị <strong>{(currentPage - 1) * PAGE_SIZE + 1}</strong>–
-              <strong>{Math.min(currentPage * PAGE_SIZE, invoices.length)}</strong> trong <strong>{invoices.length}</strong> phiếu
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                title="Trang trước"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              {pageNumbers(currentPage, pageCount).map((p, i) =>
-                p === "..." ? (
-                  <span key={`gap-${i}`} className="px-1 text-slate-400">
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`h-8 min-w-8 rounded-lg px-2 font-semibold ${
-                      p === currentPage ? "bg-[#f66315] text-white" : "border border-slate-200 hover:bg-slate-50"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-              <button
-                onClick={() => setPage(currentPage + 1)}
-                disabled={currentPage === pageCount}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                title="Trang sau"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={invoices.length} unit="phiếu" onChange={setPage} />
         )}
       </div>
 

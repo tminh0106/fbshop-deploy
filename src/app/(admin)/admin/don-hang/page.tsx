@@ -19,6 +19,9 @@ import {
   Tag,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 import { exportToExcel } from "@/lib/exportExcel";
 import {
   ORDER_STATUS,
@@ -68,6 +71,7 @@ interface OrderItem {
 }
 
 export default function AdminDonHangPage() {
+  const [page, setPage] = useState(1);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
@@ -272,6 +276,11 @@ Chỉ xác nhận sau khi đã kiểm tra sao kê ngân hàng.`
     }
   };
 
+  // Phan trang: sau khi sua/xoa van giu trang hien tai, tu lui ve trang cuoi neu het dong
+  const pageCount = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedRows = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -297,6 +306,7 @@ Chỉ xác nhận sau khi đã kiểm tra sao kê ngân hàng.`
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            setPage(1);
             fetchOrders();
           }}
           className="grid grid-cols-1 gap-3 md:grid-cols-5"
@@ -381,7 +391,7 @@ Chỉ xác nhận sau khi đã kiểm tra sao kê ngân hàng.`
                   </td>
                 </tr>
               ) : (
-                orders.map((o) => {
+                pagedRows.map((o) => {
                   const badge = getStatusBadge(o.TrangThai);
                   const Icon = badge.icon;
                   const canCancel =
@@ -504,6 +514,9 @@ Chỉ xác nhận sau khi đã kiểm tra sao kê ngân hàng.`
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={orders.length} unit="đơn hàng" onChange={setPage} />
+        )}
       </div>
 
       {/* Modal Chi Tiet Don Hang */}

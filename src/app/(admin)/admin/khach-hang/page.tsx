@@ -21,6 +21,9 @@ import {
   Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 import { orderStatusLabel } from "@/lib/orderStatus";
 import { EMAIL_ERROR, EMAIL_REGEX, PHONE_ERROR, PHONE_REGEX } from "@/lib/validation";
 
@@ -67,6 +70,7 @@ interface Customer {
 }
 
 export default function AdminKhachHangPage() {
+  const [page, setPage] = useState(1);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -134,6 +138,7 @@ export default function AdminKhachHangPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
     fetchCustomers(searchKeyword);
   };
 
@@ -225,6 +230,11 @@ export default function AdminKhachHangPage() {
   const customersWithOrders = customers.filter((c) => c.soDonHang > 0).length;
   const totalRevenueAll = customers.reduce((sum, c) => sum + c.tongChiTieu, 0);
   const avgSpent = totalCustomers > 0 ? Math.round(totalRevenueAll / totalCustomers) : 0;
+
+  // Phan trang: sau khi sua/xoa van giu trang hien tai, tu lui ve trang cuoi neu het dong
+  const pageCount = Math.max(1, Math.ceil(customers.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedRows = customers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -377,7 +387,7 @@ export default function AdminKhachHangPage() {
                   </td>
                 </tr>
               ) : (
-                customers.map((c) => {
+                pagedRows.map((c) => {
                   const initial = c.hoTen ? c.hoTen.charAt(0).toUpperCase() : "K";
                   return (
                     <tr key={c.maKH} className="hover:bg-slate-50/60 transition-colors">
@@ -463,6 +473,9 @@ export default function AdminKhachHangPage() {
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination page={currentPage} pageSize={PAGE_SIZE} total={customers.length} unit="khách hàng" onChange={setPage} />
+        )}
       </div>
 
       {/* Modal Lịch sử mua hàng của khách (kèm sản phẩm đã mua) */}
