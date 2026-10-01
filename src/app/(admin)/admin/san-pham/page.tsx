@@ -174,6 +174,14 @@ export default function AdminSanPhamPage() {
       toast.error("Vui lòng nhập tên sản phẩm");
       return;
     }
+    if (!Number.isInteger(formData.giaBan) || formData.giaBan <= 0) {
+      toast.error("Giá bán phải là số nguyên lớn hơn 0");
+      return;
+    }
+    if (!Number.isInteger(formData.soLuong) || formData.soLuong < 0) {
+      toast.error("Số lượng tồn phải là số nguyên không âm");
+      return;
+    }
 
     try {
       const method = editingProduct ? "PUT" : "POST";
@@ -501,6 +509,8 @@ export default function AdminSanPhamPage() {
                   <label className="mb-1 block font-bold text-slate-700">Giá bán (VNĐ)</label>
                   <input
                     type="number"
+                    min={1}
+                    step={1}
                     value={formData.giaBan}
                     onChange={(e) =>
                       setFormData({ ...formData, giaBan: Number(e.target.value) })
@@ -512,6 +522,8 @@ export default function AdminSanPhamPage() {
                   <label className="mb-1 block font-bold text-slate-700">Số lượng tồn</label>
                   <input
                     type="number"
+                    min={0}
+                    step={1}
                     value={formData.soLuong}
                     onChange={(e) =>
                       setFormData({ ...formData, soLuong: Number(e.target.value) })

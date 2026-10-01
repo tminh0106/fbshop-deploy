@@ -1,0 +1,909 @@
+{
+  "info": {
+    "name": "FBShop - Kiểm thử Thêm voucher",
+    "description": "Kiểm thử API chức năng Thêm voucher (POST /api/admin/voucher), khớp mã TC trong docs/testcase-them-voucher.html.\nCác TC chỉ kiểm tra trên giao diện (TC05 giá trị mặc định, TC12 đổi loại giảm, TC21 nút Hủy, các ô để trống của Đơn tối thiểu / Giảm tối đa / Số lượng) không có trong collection này.\nCách chạy: chọn môi trường (FBShop Local hoặc FBShop Hosting) -> chuột phải collection -> Run collection -> Run.\nMỗi lần chạy dùng mã voucher mới (TCV + 5 số), cuối lượt tự xóa các voucher đã tạo.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Thoi gian dang datetime-local (giong o nhap tren form), tinh lai truoc moi request",
+          "const pad = (n) => String(n).padStart(2, \"0\");",
+          "const fmt = (d) => d.getFullYear() + \"-\" + pad(d.getMonth() + 1) + \"-\" + pad(d.getDate()) + \"T\" + pad(d.getHours()) + \":\" + pad(d.getMinutes());",
+          "const now = Date.now(), DAY = 24 * 3600 * 1000;",
+          "pm.variables.set(\"now\", fmt(new Date(now)));",
+          "pm.variables.set(\"yesterday\", fmt(new Date(now - DAY)));",
+          "pm.variables.set(\"tomorrow\", fmt(new Date(now + DAY)));",
+          "pm.variables.set(\"in30d\", fmt(new Date(now + 31 * DAY)));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "adminUser",
+      "value": "admin@gmail.com"
+    },
+    {
+      "key": "khoUser",
+      "value": "kho@gmail.com"
+    },
+    {
+      "key": "password",
+      "value": "123456"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Chuẩn bị",
+      "item": [
+        {
+          "name": "Đăng nhập Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenDangNhap\": \"{{adminUser}}\",\n  \"matKhau\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/auth/login"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Ma lan chay: 5 so cuoi cua thoi gian -> ma voucher khong trung giua cac lan chay",
+                  "pm.collectionVariables.set(\"runId\", String(Date.now()).slice(-5));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Đăng nhập thành công\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "A. Trường hợp hợp lệ",
+      "item": [
+        {
+          "name": "TC01 - Thêm voucher giảm tiền mặt hợp lệ",
+          "request": {
+            "description": "Giảm 50.000đ, đơn tối thiểu 1.000.000đ, SL 100, bắt đầu ngày mai",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}TIEN\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 50000,\n  \"donHangToiThieu\": 1000000,\n  \"mucGiamToiDa\": 50000,\n  \"tongSoLuong\": 100,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Thông báo: Tạo voucher thành công\", () => pm.expect(res.message).to.eql(\"Tạo voucher thành công\"));",
+                  "pm.test(\"Voucher được lưu với trạng thái Active\", () => pm.expect(res.data.TrangThai).to.eql(\"Active\"));",
+                  "pm.test(\"Mã voucher được lưu là \" + pm.variables.replaceIn(\"TCV{{runId}}TIEN\"), () => pm.expect(res.data.MaVoucher).to.eql(pm.variables.replaceIn(\"TCV{{runId}}TIEN\")));",
+                  "pm.test(\"GiaTriGiam = 50000\", () => pm.expect(Number(res.data.GiaTriGiam)).to.eql(50000));",
+                  "pm.test(\"DonHangToiThieu = 1000000\", () => pm.expect(Number(res.data.DonHangToiThieu)).to.eql(1000000));",
+                  "pm.test(\"TongSoLuong = 100\", () => pm.expect(Number(res.data.TongSoLuong)).to.eql(100));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC02 - Thêm voucher giảm phần trăm hợp lệ",
+          "request": {
+            "description": "Giảm 10%, đơn tối thiểu 500.000đ, giảm tối đa 100.000đ, SL 50",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}PT10\",\n  \"loaiGiamGia\": \"PHANTRAM\",\n  \"giaTriGiam\": 10,\n  \"donHangToiThieu\": 500000,\n  \"mucGiamToiDa\": 100000,\n  \"tongSoLuong\": 50,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Thông báo: Tạo voucher thành công\", () => pm.expect(res.message).to.eql(\"Tạo voucher thành công\"));",
+                  "pm.test(\"Voucher được lưu với trạng thái Active\", () => pm.expect(res.data.TrangThai).to.eql(\"Active\"));",
+                  "pm.test(\"Mã voucher được lưu là \" + pm.variables.replaceIn(\"TCV{{runId}}PT10\"), () => pm.expect(res.data.MaVoucher).to.eql(pm.variables.replaceIn(\"TCV{{runId}}PT10\")));",
+                  "pm.test(\"GiaTriGiam = 10\", () => pm.expect(Number(res.data.GiaTriGiam)).to.eql(10));",
+                  "pm.test(\"MucGiamToiDa = 100000\", () => pm.expect(Number(res.data.MucGiamToiDa)).to.eql(100000));",
+                  "pm.test(\"TongSoLuong = 50\", () => pm.expect(Number(res.data.TongSoLuong)).to.eql(50));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC03 - Mã voucher chữ thường được lưu in hoa",
+          "request": {
+            "description": "Nhập mã chữ thường",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"tcv{{runId}}thuong\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 20000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Thông báo: Tạo voucher thành công\", () => pm.expect(res.message).to.eql(\"Tạo voucher thành công\"));",
+                  "pm.test(\"Voucher được lưu với trạng thái Active\", () => pm.expect(res.data.TrangThai).to.eql(\"Active\"));",
+                  "pm.test(\"Mã voucher được lưu là \" + pm.variables.replaceIn(\"TCV{{runId}}THUONG\"), () => pm.expect(res.data.MaVoucher).to.eql(pm.variables.replaceIn(\"TCV{{runId}}THUONG\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC04 - Giá trị biên hợp lệ (100%, 0, SL 1, bắt đầu = hiện tại)",
+          "request": {
+            "description": "Phần trăm 100, đơn tối thiểu 0, giảm tối đa 0, SL 1, bắt đầu đúng thời điểm hiện tại",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}PT100\",\n  \"loaiGiamGia\": \"PHANTRAM\",\n  \"giaTriGiam\": 100,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 1,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{now}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Thông báo: Tạo voucher thành công\", () => pm.expect(res.message).to.eql(\"Tạo voucher thành công\"));",
+                  "pm.test(\"Voucher được lưu với trạng thái Active\", () => pm.expect(res.data.TrangThai).to.eql(\"Active\"));",
+                  "pm.test(\"Mã voucher được lưu là \" + pm.variables.replaceIn(\"TCV{{runId}}PT100\"), () => pm.expect(res.data.MaVoucher).to.eql(pm.variables.replaceIn(\"TCV{{runId}}PT100\")));",
+                  "pm.test(\"GiaTriGiam = 100\", () => pm.expect(Number(res.data.GiaTriGiam)).to.eql(100));",
+                  "pm.test(\"TongSoLuong = 1\", () => pm.expect(Number(res.data.TongSoLuong)).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "B. Dữ liệu không hợp lệ",
+      "item": [
+        {
+          "name": "TC06 - Mã voucher đã tồn tại",
+          "request": {
+            "description": "Dùng lại mã của TC01",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}TIEN\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 409\", () => pm.response.to.have.status(409));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Mã voucher này đã tồn tại\", () => pm.expect(res.error).to.eql(\"Mã voucher này đã tồn tại\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC07 - Bỏ trống mã voucher",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Vui lòng nhập đầy đủ thông tin bắt buộc của Voucher\", () => pm.expect(res.error).to.eql(\"Vui lòng nhập đầy đủ thông tin bắt buộc của Voucher\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC08 - Bỏ trống mức giảm",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Vui lòng nhập đầy đủ thông tin bắt buộc của Voucher\", () => pm.expect(res.error).to.eql(\"Vui lòng nhập đầy đủ thông tin bắt buộc của Voucher\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC09 - Mức giảm bằng 0",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 0,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Vui lòng nhập đầy đủ thông tin bắt buộc của Voucher\", () => pm.expect(res.error).to.eql(\"Vui lòng nhập đầy đủ thông tin bắt buộc của Voucher\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC10 - Mức giảm là số âm",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": -5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\", () => pm.expect(res.error).to.eql(\"Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC11 - Phần trăm giảm vượt 100%",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"PHANTRAM\",\n  \"giaTriGiam\": 101,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%\", () => pm.expect(res.error).to.eql(\"Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC13 - Đơn tối thiểu là số âm",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": -1,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\", () => pm.expect(res.error).to.eql(\"Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC14 - Giảm tối đa là số âm",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": -1,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\", () => pm.expect(res.error).to.eql(\"Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC15a - Tổng số lượng phát hành bằng 0",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 0,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\", () => pm.expect(res.error).to.eql(\"Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC15b - Tổng số lượng phát hành là số âm",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": -3,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\", () => pm.expect(res.error).to.eql(\"Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC16 - Thời gian bắt đầu ở quá khứ",
+          "request": {
+            "description": "Bắt đầu hôm qua",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{yesterday}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại\", () => pm.expect(res.error).to.eql(\"Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC17 - Kết thúc bằng bắt đầu",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{tomorrow}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Thời gian kết thúc phải sau thời gian bắt đầu\", () => pm.expect(res.error).to.eql(\"Thời gian kết thúc phải sau thời gian bắt đầu\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC18 - Kết thúc trước bắt đầu",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{in30d}}\",\n  \"ngayKetThuc\": \"{{tomorrow}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Thời gian kết thúc phải sau thời gian bắt đầu\", () => pm.expect(res.error).to.eql(\"Thời gian kết thúc phải sau thời gian bắt đầu\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC19 - Bỏ trống thời gian bắt đầu và kết thúc",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Vui lòng nhập đầy đủ thông tin bắt buộc của Voucher\", () => pm.expect(res.error).to.eql(\"Vui lòng nhập đầy đủ thông tin bắt buộc của Voucher\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC20 - Mã voucher dài hơn 50 ký tự",
+          "request": {
+            "description": "57 ký tự",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV_MA_RAT_DAI_QUA_50_KY_TU_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Mã voucher tối đa 50 ký tự\", () => pm.expect(res.error).to.eql(\"Mã voucher tối đa 50 ký tự\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "C. Kiểm tra dữ liệu và dọn dẹp",
+      "item": [
+        {
+          "name": "Kiểm tra CSDL chỉ có 4 voucher hợp lệ được tạo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/voucher?keyword=TCV{{runId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Tải danh sách thành công\", () => pm.response.to.have.status(200));",
+                  "const codes = pm.response.json().data.map((v) => v.MaVoucher).sort();",
+                  "const runId = pm.collectionVariables.get(\"runId\");",
+                  "const expected = [\"PT10\", \"PT100\", \"THUONG\", \"TIEN\"].map((s) => \"TCV\" + runId + s).sort();",
+                  "pm.test(\"Chỉ 4 voucher của TC01-TC04 được lưu, các TC lỗi không tạo voucher\", () => pm.expect(codes).to.eql(expected));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xóa voucher thử 1/4",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/voucher?maVoucher=TCV{{runId}}TIEN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Đã xóa voucher thử\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xóa voucher thử 2/4",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/voucher?maVoucher=TCV{{runId}}PT10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Đã xóa voucher thử\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xóa voucher thử 3/4",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/voucher?maVoucher=TCV{{runId}}THUONG"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Đã xóa voucher thử\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xóa voucher thử 4/4",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/voucher?maVoucher=TCV{{runId}}PT100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Đã xóa voucher thử\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "D. Phân quyền",
+      "item": [
+        {
+          "name": "Đăng nhập Quản lý kho",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenDangNhap\": \"{{khoUser}}\",\n  \"matKhau\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Đăng nhập thành công\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC22 - Tài khoản Quản lý kho không được thêm voucher",
+          "request": {
+            "description": "",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}KHO\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 403\", () => pm.response.to.have.status(403));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Bạn không có quyền thực hiện thao tác này\", () => pm.expect(res.error).to.eql(\"Bạn không có quyền thực hiện thao tác này\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC23 - Chưa đăng nhập không được thêm voucher",
+          "request": {
+            "description": "Gửi request không kèm cookie",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}ANON\",\n  \"loaiGiamGia\": \"TIEN\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã trạng thái HTTP là 401\", () => pm.response.to.have.status(401));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Báo lỗi: Chưa đăng nhập hoặc phiên đã hết hạn\", () => pm.expect(res.error).to.eql(\"Chưa đăng nhập hoặc phiên đã hết hạn\"));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        }
+      ]
+    }
+  ]
+}

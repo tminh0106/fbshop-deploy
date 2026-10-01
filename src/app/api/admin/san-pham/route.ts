@@ -26,6 +26,26 @@ function validateHinhAnh(value: unknown): { ok: true; value: string | undefined 
   return { ok: true, value: v };
 }
 
+const MAX_PRICE = 999_999_999_999;
+const MAX_STOCK = 1_000_000;
+
+// Gia ban: so nguyen VND > 0; ton kho: so nguyen >= 0. undefined = khong gui (khi sua)
+function validateNumbers(giaBan: unknown, soLuong: unknown): string | null {
+  if (giaBan !== undefined) {
+    const n = Number(giaBan);
+    if (giaBan === "" || giaBan === null || !Number.isInteger(n) || n <= 0 || n > MAX_PRICE) {
+      return "Giá bán phải là số nguyên lớn hơn 0";
+    }
+  }
+  if (soLuong !== undefined && soLuong !== "" && soLuong !== null) {
+    const n = Number(soLuong);
+    if (!Number.isInteger(n) || n < 0 || n > MAX_STOCK) {
+      return "Số lượng tồn phải là số nguyên không âm";
+    }
+  }
+  return null;
+}
+
 // GET: Danh sach san pham
 export async function GET(request: Request) {
   try {
@@ -84,6 +104,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const numberError = validateNumbers(giaBan, soLuong);
+    if (numberError) {
+      return NextResponse.json({ error: numberError }, { status: 400 });
+    }
+
     // Kiem tra trung ma
     const existing = await prisma.sanPham.findUnique({
       where: { MaSP: maSP.trim() },
@@ -129,6 +154,11 @@ export async function PUT(request: Request) {
 
     if (!maSP) {
       return NextResponse.json({ error: "Thiếu mã sản phẩm" }, { status: 400 });
+    }
+
+    const numberError = validateNumbers(giaBan, soLuong);
+    if (numberError) {
+      return NextResponse.json({ error: numberError }, { status: 400 });
     }
 
     const image = validateHinhAnh(hinhAnh);

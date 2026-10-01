@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     // Kiem tra trang thai
     const statusNormalized = voucher.TrangThai.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (statusNormalized.includes("huy") || statusNormalized.includes("inactive") || statusNormalized.includes("khoa")) {
+    if (statusNormalized.includes("huy") || statusNormalized.includes("inactive") || statusNormalized.includes("khoa") || statusNormalized.includes("disabled")) {
       return NextResponse.json({ error: "Mã giảm giá đã hết hiệu lực" }, { status: 400 });
     }
 
