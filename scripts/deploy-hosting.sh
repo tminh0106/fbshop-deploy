@@ -29,9 +29,17 @@ else
 fi
 
 # Hosting: glibc 2.28 khong chay duoc Turbopack -> build bang Webpack;
-# gioi han so tien trinh -> build bang 1 tien trinh
-echo "==> Build ban production (khoang 3 phut)"
-NEXT_BUILD_CPUS=1 npx next build --webpack
+# gioi han so tien trinh/luong -> build bang 1 tien trinh, it luong,
+# va tam dung web trong luc build (web dang chay chiem mat so luong cho phep)
+export NEXT_BUILD_CPUS=1 RAYON_NUM_THREADS=1 UV_THREADPOOL_SIZE=2 NEXT_TELEMETRY_DISABLED=1
+echo "==> Tam dung web de build (web tam ngung khoang 3 phut)"
+pm2 stop fbshop >/dev/null || true
+echo "==> Build ban production"
+if ! npx next build --webpack; then
+  echo "!!! Build loi -> chay lai web voi ban build truoc do (neu con)"
+  pm2 start fbshop >/dev/null || true
+  exit 1
+fi
 
 echo "==> Khoi dong lai web"
 pm2 restart fbshop
