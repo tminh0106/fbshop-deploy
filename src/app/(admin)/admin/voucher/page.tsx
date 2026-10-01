@@ -92,6 +92,8 @@ export default function AdminVoucherPage() {
 
     if (!formData.maVoucher?.trim()) {
       errs.maVoucher = "Vui lòng nhập mã voucher";
+    } else if (formData.maVoucher.trim().length > 50) {
+      errs.maVoucher = "Mã voucher tối đa 50 ký tự";
     }
 
     if (formData.giaTriGiam === "") {
@@ -704,6 +706,7 @@ export default function AdminVoucherPage() {
                   type="text"
                   disabled={!!editingVoucher}
                   placeholder="Ví dụ: FBSHOP50K"
+                  maxLength={50}
                   value={formData.maVoucher}
                   onBlur={() => {
                     if (!formData.maVoucher?.trim()) {

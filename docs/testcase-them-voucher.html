@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testcase Thêm voucher</title>
+<style>
+  :root { --ink:#111; --line:#444; --muted:#555; --head:#f2f2f2; --note:#fff7e6; --pass:#e8f5e9; --fail:#fdecea; --bg:#fff; }
+  body { background:var(--bg); color:var(--ink); font-family:"Times New Roman", Times, serif; font-size:13pt; line-height:1.45; max-width:1100px; margin:0 auto; padding:24px 16px 60px; }
+  h1 { font-size:18pt; text-align:center; margin:0 0 4px; }
+  h2 { font-size:14pt; margin:28px 0 8px; }
+  h3 { font-size:13pt; margin:18px 0 6px; font-style:italic; text-align:center; font-weight:normal; }
+  p.sub { text-align:center; color:var(--muted); margin:0 0 20px; }
+  .wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; margin:6px 0 14px; }
+  th, td { border:1px solid var(--line); padding:5px 7px; vertical-align:top; text-align:left; }
+  th { background:var(--head); text-align:center; }
+  td.k { width:22%; font-weight:bold; }
+  td.c { text-align:center; white-space:nowrap; }
+  td.pass { background:var(--pass); text-align:center; font-weight:bold; }
+  td.fail { background:var(--fail); text-align:center; font-weight:bold; }
+  ol, ul { margin:0; padding-left:20px; }
+  li { margin:1px 0; }
+  .note { background:var(--note); border:1px solid #e0c48a; padding:10px 12px; margin:10px 0; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink:#e8e8e8; --line:#888; --muted:#aaa; --head:#2a2a2a; --note:#3a3220; --pass:#1f3a24; --fail:#4a2323; --bg:#161616; }
+  }
+  :root[data-theme="dark"] { --ink:#e8e8e8; --line:#888; --muted:#aaa; --head:#2a2a2a; --note:#3a3220; --pass:#1f3a24; --fail:#4a2323; --bg:#161616; }
+</style>
+</head>
+<body>
+
+<h1>KIỂM THỬ CHỨC NĂNG THÊM VOUCHER</h1>
+<p class="sub">Phân hệ Quản lý voucher (FR-22) – Hệ thống FBShop</p>
+
+<h3>Bảng 4.x. Thông tin chung kiểm thử chức năng Thêm voucher</h3>
+<table>
+  <tr><td class="k">Chức năng</td><td>Thêm voucher (Tạo voucher mới)</td></tr>
+  <tr><td class="k">Tác nhân</td><td>Người quản lý (tài khoản vai trò Admin)</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Đăng nhập trang quản trị bằng tài khoản Admin (admin@gmail.com); mở <i>Quản lý voucher</i> → bấm <b>Tạo voucher mới</b>.</td></tr>
+  <tr><td class="k">Dữ liệu trên form</td><td>Mã voucher*, Loại giảm giá (Giảm tiền mặt / Giảm phần trăm), Mức giảm*, Đơn tối thiểu*, Giảm tối đa*, Tổng số lượng phát hành*, Bắt đầu (ngày &amp; giờ)*, Kết thúc (ngày &amp; giờ)*</td></tr>
+  <tr><td class="k">Quy tắc kiểm tra</td><td>
+    <ul>
+      <li>Mã voucher bắt buộc, tối đa 50 ký tự, tự chuyển chữ in hoa, không được trùng mã đã có.</li>
+      <li>Mức giảm &gt; 0; nếu giảm phần trăm thì không quá 100%.</li>
+      <li>Đơn tối thiểu, Giảm tối đa ≥ 0; Tổng số lượng phát hành &gt; 0.</li>
+      <li>Thời gian bắt đầu không nhỏ hơn thời điểm hiện tại; thời gian kết thúc phải sau thời gian bắt đầu.</li>
+      <li>Voucher mới tạo có trạng thái hoạt động (Active).</li>
+    </ul>
+  </td></tr>
+  <tr><td class="k">Môi trường</td><td>Trình duyệt Chrome/Edge; máy chủ Next.js chạy cục bộ, CSDL MySQL dùng chung. Ngày kiểm thử: 01/10/2026.</td></tr>
+</table>
+
+<h3>Bảng 4.y. Các trường hợp kiểm thử chức năng Thêm voucher</h3>
+<div class="wrap">
+<table>
+  <tr>
+    <th style="width:6%">Mã TC</th>
+    <th style="width:17%">Mô tả kịch bản</th>
+    <th style="width:24%">Dữ liệu đầu vào</th>
+    <th style="width:22%">Kết quả mong đợi</th>
+    <th style="width:22%">Kết quả thực tế</th>
+    <th style="width:9%">Đánh giá</th>
+  </tr>
+
+  <tr><td colspan="6"><b>A. Trường hợp hợp lệ</b></td></tr>
+  <tr><td class="c">TC01</td><td>Thêm voucher giảm tiền mặt hợp lệ</td>
+    <td>Mã: TCVTIEN50K; Loại: Giảm tiền mặt; Mức giảm: 50.000; Đơn tối thiểu: 1.000.000; Giảm tối đa: 50.000; SL: 100; Bắt đầu: ngày mai; Kết thúc: sau 30 ngày</td>
+    <td>Thông báo “Tạo voucher thành công”, form đóng, voucher hiện trong danh sách với trạng thái “Sắp diễn ra”</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC02</td><td>Thêm voucher giảm phần trăm hợp lệ</td>
+    <td>Mã: TCVPT10; Loại: Giảm phần trăm; Mức giảm: 10; Đơn tối thiểu: 500.000; Giảm tối đa: 100.000; SL: 50; thời gian hợp lệ</td>
+    <td>Tạo thành công, danh sách hiển thị nhãn “GIẢM %” và giá trị 10%</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC03</td><td>Nhập mã voucher bằng chữ thường</td>
+    <td>Mã: tcvthuong; các trường khác hợp lệ</td>
+    <td>Mã tự chuyển thành chữ in hoa “TCVTHUONG” và được lưu dạng in hoa</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC04</td><td>Giá trị biên hợp lệ</td>
+    <td>Loại: Giảm phần trăm; Mức giảm: 100; Đơn tối thiểu: 0; Giảm tối đa: 0; SL: 1; Bắt đầu: đúng thời điểm hiện tại</td>
+    <td>Tạo thành công, voucher có trạng thái “Đang hoạt động”</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC05</td><td>Giá trị mặc định khi mở form</td>
+    <td>Bấm “Tạo voucher mới”, không nhập gì</td>
+    <td>Form tiêu đề “TẠO VOUCHER MỚI”, mã gợi ý dạng FBSHOP_xxxx, Giảm tiền mặt 50.000, Đơn tối thiểu 1.000.000, Giảm tối đa 50.000, SL 100, Bắt đầu = hiện tại, Kết thúc = sau 30 ngày</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+
+  <tr><td colspan="6"><b>B. Kiểm tra dữ liệu không hợp lệ</b></td></tr>
+  <tr><td class="c">TC06</td><td>Mã voucher đã tồn tại</td>
+    <td>Mã: TCVTIEN50K (đã tạo ở TC01); các trường khác hợp lệ</td>
+    <td>Báo lỗi “Mã voucher này đã tồn tại”, không tạo voucher, form giữ nguyên dữ liệu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC07</td><td>Bỏ trống mã voucher</td>
+    <td>Mã: (để trống); các trường khác hợp lệ</td>
+    <td>Ô mã viền đỏ, báo “Vui lòng nhập mã voucher”; thông báo “Vui lòng điền đầy đủ và kiểm tra các trường báo đỏ!”</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC08</td><td>Bỏ trống mức giảm</td>
+    <td>Mức giảm: (để trống)</td>
+    <td>Báo “Vui lòng nhập mức giảm”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC09</td><td>Mức giảm bằng 0</td>
+    <td>Mức giảm: 0</td>
+    <td>Báo “Mức giảm phải lớn hơn 0”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC10</td><td>Mức giảm là số âm</td>
+    <td>Mức giảm: -5.000</td>
+    <td>Báo “Định dạng dữ liệu không hợp lệ: Không được nhập số âm”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC11</td><td>Phần trăm giảm vượt 100%</td>
+    <td>Loại: Giảm phần trăm; Mức giảm: 101</td>
+    <td>Báo “Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC12</td><td>Đổi loại giảm khi mức giảm đang lớn hơn 100</td>
+    <td>Mức giảm: 50.000 (Giảm tiền mặt) → đổi Loại sang Giảm phần trăm</td>
+    <td>Ngay khi đổi loại, ô mức giảm báo lỗi vượt quá 100%</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC13</td><td>Đơn tối thiểu không hợp lệ</td>
+    <td>(a) Đơn tối thiểu: để trống; (b) Đơn tối thiểu: -1</td>
+    <td>(a) “Vui lòng nhập đơn tối thiểu”; (b) “Định dạng dữ liệu không hợp lệ: Không được nhập số âm”; không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC14</td><td>Giảm tối đa không hợp lệ</td>
+    <td>(a) Giảm tối đa: để trống; (b) Giảm tối đa: -1</td>
+    <td>(a) “Vui lòng nhập mức giảm tối đa”; (b) “Định dạng dữ liệu không hợp lệ: Không được nhập số âm”; không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC15</td><td>Tổng số lượng phát hành không hợp lệ</td>
+    <td>(a) SL: 0; (b) SL: -3; (c) SL: để trống</td>
+    <td>(a) “Tổng số lượng phát hành phải lớn hơn 0”; (b) “…Không được nhập số âm”; (c) “Vui lòng nhập tổng số lượng phát hành”; không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC16</td><td>Thời gian bắt đầu ở quá khứ</td>
+    <td>Bắt đầu: hôm qua; Kết thúc: sau 30 ngày</td>
+    <td>Báo “Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC17</td><td>Thời gian kết thúc bằng thời gian bắt đầu</td>
+    <td>Bắt đầu = Kết thúc = ngày mai cùng giờ</td>
+    <td>Báo “Thời gian kết thúc phải sau thời gian bắt đầu”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC18</td><td>Thời gian kết thúc trước thời gian bắt đầu</td>
+    <td>Bắt đầu: sau 31 ngày; Kết thúc: ngày mai</td>
+    <td>Báo “Thời gian kết thúc phải sau thời gian bắt đầu”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC19</td><td>Bỏ trống thời gian</td>
+    <td>Xóa trắng ô Bắt đầu và ô Kết thúc</td>
+    <td>Báo “Vui lòng chọn thời gian bắt đầu” và “Vui lòng chọn thời gian kết thúc”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC20</td><td>Mã voucher quá dài (&gt; 50 ký tự)</td>
+    <td>Mã: TCV_MA_RAT_DAI_QUA_50_KY_TU_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123 (57 ký tự)</td>
+    <td>Ô mã chỉ nhận tối đa 50 ký tự; nếu dữ liệu gửi lên vượt 50 ký tự thì báo “Mã voucher tối đa 50 ký tự”, không lưu</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+
+  <tr><td colspan="6"><b>C. Thao tác giao diện và phân quyền</b></td></tr>
+  <tr><td class="c">TC21</td><td>Hủy thêm voucher</td>
+    <td>Nhập dữ liệu hợp lệ rồi bấm “Hủy” (hoặc nút ✕)</td>
+    <td>Form đóng, không có voucher nào được tạo</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC22</td><td>Tài khoản không có quyền thêm voucher</td>
+    <td>Đăng nhập kho@gmail.com (Quản lý kho), gửi yêu cầu tạo voucher</td>
+    <td>Bị từ chối “Bạn không có quyền thực hiện thao tác này”, không tạo voucher; menu Quản lý voucher không hiển thị</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC23</td><td>Chưa đăng nhập</td>
+    <td>Gửi yêu cầu tạo voucher khi chưa đăng nhập</td>
+    <td>Bị từ chối “Chưa đăng nhập hoặc phiên đã hết hạn”, không tạo voucher</td>
+    <td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+</table>
+</div>
+
+<h3>Bảng 4.z. Tổng hợp kết quả kiểm thử chức năng Thêm voucher</h3>
+<table>
+  <tr><th>Tổng số TC</th><th>Đạt</th><th>Không đạt</th><th>Tỉ lệ đạt</th></tr>
+  <tr><td class="c">23</td><td class="c">23</td><td class="c">0</td><td class="c">100%</td></tr>
+</table>
+
+</body>
+</html>

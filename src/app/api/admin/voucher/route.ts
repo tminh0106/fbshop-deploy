@@ -109,10 +109,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // Cot MaVoucher trong CSDL la VarChar(50)
+    if (String(maVoucher).trim().length > 50) {
+      return NextResponse.json(
+        { error: "Mã voucher tối đa 50 ký tự" },
+        { status: 400 }
+      );
+    }
+
     const numGiaTri = Number(giaTriGiam);
     const numDonHangToiThieu = Number(donHangToiThieu) || 0;
     const numMucGiamToiDa = Number(mucGiamToiDa) || 0;
-    const numTongSoLuong = Number(tongSoLuong) || 100;
+    // Chi mac dinh 100 khi khong gui so luong; gui 0 thi bi chan o buoc kiem tra ben duoi
+    const numTongSoLuong =
+      tongSoLuong === undefined || tongSoLuong === null || tongSoLuong === ""
+        ? 100
+        : Number(tongSoLuong);
 
     if (numGiaTri <= 0 || numDonHangToiThieu < 0 || numMucGiamToiDa < 0 || numTongSoLuong <= 0) {
       return NextResponse.json(
