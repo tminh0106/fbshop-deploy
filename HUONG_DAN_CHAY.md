@@ -7,7 +7,7 @@
 
 ## 1. YÊU CẦU MÔI TRƯỜNG HỆ THỐNG
 Để chạy ứng dụng một cách tối ưu và không gặp lỗi, máy tính cần cài đặt:
-- **Node.js:** Phiên bản `>= 18.17.0` (Khuyến nghị Node.js 20.x LTS).
+- **Node.js:** Phiên bản `>= 20.9.0` (bắt buộc với Next.js 16; khuyến nghị Node.js 22 LTS). Kiểm tra bằng `node -v`.
 - **Trình quản lý gói:** `npm` (đi kèm Node.js) hoặc `yarn` / `pnpm`.
 - **Hệ quản trị CSDL:** **MySQL / MariaDB dùng chung** trên hosting (không cần cài CSDL trên máy cá nhân). Mọi thành viên kết nối cùng một CSDL nên dữ liệu luôn đồng bộ giữa các máy.
 - **Trình duyệt web:** Google Chrome, Microsoft Edge hoặc Firefox phiên bản mới nhất.
@@ -15,7 +15,16 @@
 ---
 
 ## 2. CẤU HÌNH BIẾN MÔI TRƯỜNG (.env)
-Tạo file `.env` tại thư mục gốc của dự án với chuỗi kết nối MySQL dùng chung:
+Sao chép file mẫu `.env.example` thành `.env` (cùng thư mục với `package.json`) rồi thay `<MAT_KHAU>` bằng mật khẩu CSDL:
+
+```bash
+# Windows PowerShell
+Copy-Item .env.example .env
+# macOS / Linux / Git Bash
+cp .env.example .env
+```
+
+Nội dung file `.env`:
 
 ```env
 # CSDL MySQL dùng chung - xin mật khẩu từ trưởng nhóm, KHÔNG đưa lên Git
@@ -40,6 +49,9 @@ Mở terminal (PowerShell, Command Prompt hoặc Terminal trong VS Code) tại t
 npm install
 npx prisma generate
 ```
+> `npm install` đã tự chạy `prisma generate`; lệnh thứ hai chỉ để chắc chắn. Cảnh báo `npm warn install-scripts` của npm 11 là bình thường, không ảnh hưởng.
+>
+> Nếu chạy báo lỗi kết nối CSDL hoặc "Environment variable not found: DATABASE_URL": kiểm tra lại file `.env` (Bước 2) đã đặt đúng ở thư mục gốc dự án (cùng cấp `package.json`).
 
 ### Bước 3.2: CSDL
 12 bảng đã được tạo sẵn trên CSDL dùng chung, **không cần** chạy `prisma db push` hay seed.
@@ -67,7 +79,7 @@ Hệ thống đã chuẩn bị sẵn 4 tài khoản phân quyền chuẩn xác t
 | **Admin – Người quản lý** | `admin@gmail.com` | — | `123456` | Vai trò `Admin`: toàn quyền + nhà cung cấp, voucher, nhân viên, phân quyền tài khoản, báo cáo |
 | **Nhân viên kho** | `kho@gmail.com` | — | `123456` | Vai trò `NhanVienKho`: sản phẩm, hàng hóa kho, lập/hủy phiếu nhập–xuất (BR-01) |
 | **Nhân viên bán hàng** | `banhang@gmail.com` | — | `123456` | Vai trò `BanHang`: đơn hàng, khách hàng, sản phẩm |
-| **Khách hàng Mẫu** | `0912345678` | `khach@gmail.com` | `123456` | Khách mua hàng: Duyệt sản phẩm, đặt hàng COD/VNPAY, áp mã voucher, theo dõi đơn |
+| **Khách hàng Mẫu** | `0912345678` | `khach@gmail.com` | `123456` | Khách mua hàng: duyệt sản phẩm, đặt hàng COD hoặc chuyển khoản VietQR, áp mã voucher, theo dõi / tự hủy đơn |
 
 ---
 
@@ -103,18 +115,22 @@ npm run build
 ├── / ............................ Trang chủ (Banner, Sản phẩm hot, Voucher)
 ├── /san-pham .................... Danh mục sản phẩm (Tìm kiếm, Lọc giá/hãng, Phân trang)
 ├── /san-pham/[id] ............... Chi tiết sản phẩm (Thông số vợt, Chọn số lượng, Mua ngay)
-├── /gio-hang .................... Giỏ hàng & Áp dụng Voucher giảm giá
-├── /thanh-toan .................. Đặt hàng (COD, Thông tin người nhận)
-├── /tai-khoan/don-hang .......... Tra cứu lịch sử đơn hàng của khách
+├── /gio-hang .................... Giỏ hàng (tự cập nhật giá / tồn kho)
+├── /dat-hang .................... Đặt hàng: thông tin người nhận, voucher, COD hoặc VietQR
+├── /dat-hang/thanh-toan-qr ...... Thanh toán chuyển khoản VietQR (giữ đơn 24 giờ)
+├── /tai-khoan/don-hang .......... Lịch sử đơn, trạng thái thanh toán, thanh toán tiếp / hủy đơn
 └── /dang-nhap ................... Đăng nhập khách hàng bằng SĐT/Email
 
 [FBSHOP ADMIN / STAFF] (Vận hành & Quản trị)
 ├── /admin/login ................. Trang đăng nhập chuyên dụng cho Admin/Staff
 ├── /admin/thong-ke .............. Dashboard biểu đồ doanh thu, cơ cấu kho, top bán chạy
-├── /admin/hoa-don-kho ........... Phiếu nhập kho (+tồn), Phiếu xuất kho (-tồn), Hủy hoàn nguyên BR-01
-├── /admin/don-hang .............. Xử lý quy trình đơn hàng 4 trạng thái
-├── /admin/khach-hang ............ Quản lý danh sách khách hàng, lịch sử mua hàng, tổng chi tiêu
+├── /admin/hoa-don-kho ........... Phiếu nhập/xuất kho (mẫu 01-VT/02-VT, in phiếu), công nợ NCC, hủy hoàn nguyên BR-01
+├── /admin/hang-hoa-kho .......... Lô hàng trong kho (thêm / sửa / xóa)
+├── /admin/nha-cung-cap .......... Nhà cung cấp, công nợ, chặn xóa khi còn nợ
+├── /admin/don-hang .............. Quy trình đơn: Chờ thanh toán → Chờ xác nhận → Đang xử lý → Đang giao → Đã giao; xác nhận nhận tiền, hoàn tiền
+├── /admin/khach-hang ............ Khách hàng: tìm kiếm, sửa, xóa (khách tự đăng ký), lịch sử mua, tổng chi tiêu
 ├── /admin/san-pham .............. Quản lý sản phẩm, giá bán, cấu hình hiển thị
 ├── /admin/nhan-vien ............. Quản lý danh sách nhân sự (Kiểm tra trùng SĐT/Email)
-└── /admin/voucher ............... Quản lý mã ưu đãi, giới hạn sử dụng
+├── /admin/voucher ............... Quản lý mã ưu đãi, giới hạn sử dụng
+└── /admin/tai-khoan ............. Quản lý tài khoản & phân quyền
 ```

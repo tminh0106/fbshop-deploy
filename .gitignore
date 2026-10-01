@@ -42,3 +42,6 @@ next-env.d.ts
 
 # du lieu xuat ra khi chuyen CSDL (chua thong tin khach hang, mat khau da ma hoa)
 database/export/
+
+# mau cau hinh khong chua mat khau
+!.env.example
