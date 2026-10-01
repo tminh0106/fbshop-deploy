@@ -50,6 +50,18 @@ export default function AdminLoginPage() {
     }
   };
 
+  const quickFill = (user: string, pass: string = "123456") => {
+    setTenDangNhap(user);
+    setMatKhau(pass);
+    setError("");
+  };
+
+  const QUICK_ACCOUNTS = [
+    { user: "admin@gmail.com", label: "Admin", desc: "Toàn quyền" },
+    { user: "kho@gmail.com", label: "Quản lý kho", desc: "Nhập/xuất kho" },
+    { user: "banhang@gmail.com", label: "Nhân viên", desc: "Xử lý đơn" },
+  ];
+
   const inputClass =
     "h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition-all focus:border-[#f66315] focus:ring-4 focus:ring-orange-100";
 
@@ -107,7 +119,7 @@ export default function AdminLoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          <form onSubmit={handleSubmit} autoComplete="off" className="mt-8 space-y-5">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Tên đăng nhập
@@ -116,6 +128,8 @@ export default function AdminLoginPage() {
                 <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
+                  name="fbshop-admin-user"
+                  autoComplete="off"
                   placeholder="vd: admin@gmail.com"
                   value={tenDangNhap}
                   onChange={(e) => {
@@ -133,6 +147,8 @@ export default function AdminLoginPage() {
                 <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="password"
+                  name="fbshop-admin-pass"
+                  autoComplete="new-password"
                   placeholder="••••••"
                   value={matKhau}
                   onChange={(e) => {
@@ -153,6 +169,24 @@ export default function AdminLoginPage() {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
           </form>
+          {/* Dien nhanh tai khoan demo */}
+          <div className="mt-8">
+            <div className="grid grid-cols-3 gap-2">
+              {QUICK_ACCOUNTS.map((acc) => (
+                <button
+                  key={acc.user}
+                  type="button"
+                  onClick={() => quickFill(acc.user)}
+                  className={`rounded-xl border px-2 py-2.5 text-center transition-all hover:border-[#f66315] hover:bg-orange-50 ${
+                    tenDangNhap === acc.user ? "border-[#f66315] bg-orange-50" : "border-slate-200"
+                  }`}
+                >
+                  <span className="block text-[13px] font-semibold text-slate-800">{acc.label}</span>
+                  <span className="block text-[11px] text-slate-500">{acc.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
