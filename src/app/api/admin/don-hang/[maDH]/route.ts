@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { requireFeature } from "@/lib/auth";
-import { ORDER_STATUS, ORDER_UNDELETABLE } from "@/lib/orderStatus";
+import { ORDER_STATUS, ORDER_UNDELETABLE, PAYMENT_STATUS } from "@/lib/orderStatus";
+import { restoreOrderResources } from "@/lib/orderRestore";
 
 // =======================================================
 // XOA DON HANG - Bang 3.9 / FR-13
-// Chan xoa don dang giao / da giao (A2). Don chua huy -> hoan tra ton kho truoc khi xoa
-// (don da huy thi ton kho da duoc hoan luc huy, khong cong lai lan nua).
+// Chan xoa don dang giao / da giao (A2). Don chua huy -> hoan tra ton kho va luot voucher truoc khi xoa
+// (don da huy thi da hoan tra luc huy, khong cong lai lan nua).
 // =======================================================
 
 const LEGACY_UNDELETABLE = ["Shipping", "Completed"];
@@ -27,14 +28,18 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       );
     }
 
+    // Don da nhan tien (chua hoan) la chung tu tai chinh -> khong xoa
+    if (order.TrangThaiThanhToan === PAYMENT_STATUS.PAID || order.TrangThaiThanhToan === PAYMENT_STATUS.REFUND_PENDING) {
+      return NextResponse.json(
+        { error: "Không thể xóa đơn hàng đã thanh toán. Vui lòng hủy đơn và hoàn tiền cho khách trước" },
+        { status: 400 }
+      );
+    }
+
     const restoreStock = order.TrangThai !== ORDER_STATUS.CANCELLED && order.TrangThai !== "Cancelled";
 
     await prisma.$transaction(async (tx) => {
-      if (restoreStock) {
-        for (const item of order.ChiTietDonHangs) {
-          await tx.sanPham.update({ where: { MaSP: item.MaSP }, data: { SoLuong: { increment: item.SoLuong } } });
-        }
-      }
+      if (restoreStock) await restoreOrderResources(tx, order);
       await tx.chiTietDonHang.deleteMany({ where: { MaDH: maDH } });
       await tx.donHang.delete({ where: { MaDH: maDH } });
     });

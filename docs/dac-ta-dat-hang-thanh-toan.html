@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đặc tả Đặt hàng – Thanh toán (bản sửa)</title>
+<style>
+  :root { --ink:#111; --line:#444; --muted:#555; --head:#f2f2f2; --note:#fff7e6; --bg:#fff; }
+  body { background:var(--bg); color:var(--ink); font-family:"Times New Roman", Times, serif; font-size:13pt; line-height:1.5; max-width:900px; margin:0 auto; padding:24px 16px 60px; }
+  h1 { font-size:18pt; text-align:center; margin:0 0 4px; }
+  h2 { font-size:14pt; margin:32px 0 8px; }
+  h3 { font-size:13pt; margin:22px 0 6px; font-style:italic; text-align:center; font-weight:normal; }
+  p.sub { text-align:center; color:var(--muted); margin:0 0 24px; }
+  table { width:100%; border-collapse:collapse; margin:6px 0 14px; }
+  th, td { border:1px solid var(--line); padding:6px 8px; vertical-align:top; text-align:left; }
+  th { background:var(--head); }
+  td.k { width:24%; font-weight:bold; }
+  ol, ul { margin:0; padding-left:20px; }
+  li { margin:2px 0; }
+  .note { background:var(--note); border:1px solid #e0c48a; padding:10px 12px; margin:10px 0; }
+  pre { background:#f6f6f6; border:1px solid #ccc; padding:10px; font-size:10.5pt; overflow-x:auto; white-space:pre; }
+  code { font-family: Consolas, monospace; font-size:11pt; }
+  @media print { .note { break-inside:avoid; } }
+</style>
+</head>
+<body>
+
+<h1>ĐẶC TẢ CHỨC NĂNG ĐẶT HÀNG – THANH TOÁN (BẢN SỬA)</h1>
+<p class="sub">Thay thế các mục tương ứng trong chương 3 – Hệ thống FBShop</p>
+
+<h2>1. Các điểm sai logic trong đặc tả cũ</h2>
+<table>
+  <tr><th style="width:4%">#</th><th style="width:32%">Đặc tả cũ (Bảng 3.48)</th><th style="width:30%">Vì sao sai</th><th>Cách sửa</th></tr>
+  <tr><td>1</td><td>Mô tả UC ghi “Tiền mặt, Chuyển khoản, Thẻ”; luồng chính lại ghi “COD, Ví điện tử, Chuyển khoản ngân hàng”.</td><td>Hai chỗ trong cùng một bảng liệt kê khác nhau; hệ thống không có thanh toán thẻ.</td><td>Thống nhất 2 phương thức đúng như FR-08: <b>COD</b> và <b>Chuyển khoản ngân hàng / ví điện tử qua mã VietQR</b>.</td></tr>
+  <tr><td>2</td><td>“Hệ thống chuyển hướng sang cổng thanh toán… nhận tín hiệu giao dịch thành công từ ngân hàng/cổng thanh toán”.</td><td>Mâu thuẫn với mục 1.3 Giới hạn đề tài: “xác nhận chuyển khoản thủ công; chưa tích hợp cổng thanh toán trực tuyến”. Không có cổng thì hệ thống không thể tự nhận tín hiệu.</td><td>Khách quét VietQR rồi bấm “Tôi đã chuyển khoản”; <b>nhân viên đối soát sao kê và bấm “Xác nhận đã nhận tiền”</b>.</td></tr>
+  <tr><td>3</td><td>Luồng chính: thanh toán thành công <i>rồi mới</i> “lưu đơn hàng vào CSDL”; luồng phụ: thanh toán thất bại thì “đơn hàng được lưu vào mục Chờ thanh toán”.</td><td>Tự mâu thuẫn: nếu chỉ lưu đơn sau khi thanh toán thành công thì khi thất bại không có đơn nào để nằm ở “Chờ thanh toán”. Mã QR cũng cần mã đơn để làm nội dung chuyển khoản.</td><td><b>Lưu đơn trước</b> (trạng thái “Chờ thanh toán”), sinh mã QR theo mã đơn, sau đó mới thanh toán.</td></tr>
+  <tr><td>4</td><td>Trừ tồn kho sau khi thanh toán thành công.</td><td>Trong lúc khách đang chuyển khoản, khách khác có thể mua hết hàng, dẫn đến khách đã trả tiền nhưng shop hết hàng.</td><td>Trừ tồn kho (<b>giữ hàng</b>) ngay khi lưu đơn; nếu đơn bị hủy hoặc quá hạn thì hoàn trả tồn kho.</td></tr>
+  <tr><td>5</td><td>Cập nhật trạng thái “Đã thanh toán” (hoặc “Chờ xác nhận” nếu là COD).</td><td>Trộn 2 khái niệm khác nhau. Quy trình đơn hàng (FR-11, Bảng 3.8) không có trạng thái “Đã thanh toán”. Đơn COD vẫn phải thu tiền khi giao; đơn đã trả tiền vẫn phải qua xác nhận, đóng gói, giao hàng.</td><td>Tách thành 2 trạng thái độc lập: <b>Trạng thái đơn hàng</b> (xử lý, giao vận) và <b>Trạng thái thanh toán</b> (Chưa thanh toán / Đã thanh toán / Chờ hoàn tiền / Đã hoàn tiền).</td></tr>
+  <tr><td>6</td><td>“Hết hạn thời gian quét mã” nhưng không nêu thời hạn; đơn “Chờ thanh toán” không bao giờ kết thúc.</td><td>Đơn chưa trả tiền giữ hàng vô thời hạn, hàng bị “treo” trong kho.</td><td>Hạn thanh toán <b>24 giờ</b>; quá hạn mà khách chưa báo chuyển khoản thì hệ thống tự hủy đơn và hoàn kho.</td></tr>
+  <tr><td>7</td><td>Không đề cập việc hủy đơn đã thanh toán.</td><td>Đơn đã nhận tiền bị hủy thì shop phải hoàn tiền; nếu cho xóa đơn sẽ mất chứng từ tiền.</td><td>Hủy đơn đã thanh toán chuyển sang “<b>Chờ hoàn tiền</b>” → nhân viên “Xác nhận đã hoàn tiền”; chặn xóa đơn đã thanh toán chưa hoàn tiền.</td></tr>
+  <tr><td>8</td><td>Tiền điều kiện chỉ ghi “giỏ hàng hợp lệ”, không kiểm tra lại khi chốt đơn.</td><td>Từ lúc thêm vào giỏ đến lúc đặt, tồn kho, giá hoặc voucher có thể đã thay đổi.</td><td>Bổ sung bước kiểm tra lại tồn kho, giá, voucher tại thời điểm đặt và các luồng ngoại lệ tương ứng.</td></tr>
+  <tr><td>9</td><td>Hủy đơn không nói gì đến voucher; lượt voucher bị trừ không kiểm tra còn lượt.</td><td>Khách hủy đơn mất luôn lượt voucher; nhiều khách dùng lượt cuối cùng lúc làm số lượt bị âm.</td><td>Hủy/xóa đơn chưa hủy thì <b>hoàn trả 1 lượt voucher</b>; chỉ trừ lượt khi còn lượt, khách đến sau nhận thông báo hết lượt.</td></tr>
+  <tr><td>10</td><td>Chưa có chức năng khách tự hủy đơn.</td><td>Khách đặt nhầm hoặc đổi ý phải gọi shop; đơn sai vẫn giữ hàng.</td><td>Bổ sung <b>Bảng 3.49 – Hủy đơn hàng (Khách hàng)</b>.</td></tr>
+</table>
+
+<h2>2. Sửa bảng yêu cầu chức năng</h2>
+<table>
+  <tr><th style="width:10%">Mã YC</th><th style="width:20%">Tên yêu cầu</th><th>Mô tả chi tiết (bản sửa)</th></tr>
+  <tr><td>FR-08</td><td>Đặt hàng &amp; Thanh toán</td><td>Xác nhận đơn hàng, nhập ghi chú kỹ thuật (như mức căng cước vợt), áp dụng voucher, chọn phương thức thanh toán: COD hoặc chuyển khoản ngân hàng/ví điện tử qua mã VietQR. Hệ thống kiểm tra lại tồn kho, giá bán và voucher tại thời điểm đặt; lưu đơn và trừ tồn kho ngay khi đặt (đơn chuyển khoản được giữ hàng 24 giờ). Giao dịch chuyển khoản do nhân viên đối soát sao kê và xác nhận trên hệ thống.</td></tr>
+  <tr><td>FR-09</td><td>Lịch sử &amp; Trạng thái đơn</td><td>Khách hàng theo dõi trạng thái xử lý và trạng thái thanh toán của từng đơn, xem lại mã QR để thanh toán tiếp đơn “Chờ thanh toán”, và tự hủy đơn khi cửa hàng chưa xử lý và đơn chưa được thanh toán.</td></tr>
+  <tr><td>FR-11</td><td>Cập nhật trạng thái đơn</td><td>Nhân viên/Quản lý cập nhật trạng thái đơn theo quy trình: Chờ thanh toán → Chờ xác nhận → Đang xử lý → Đang giao → Đã giao; hủy được trước khi giao. Đồng thời ghi nhận trạng thái thanh toán: xác nhận đã nhận tiền chuyển khoản, đơn COD giao thành công được tính là đã thu tiền, đơn đã thanh toán bị hủy chuyển sang Chờ hoàn tiền → Đã hoàn tiền.</td></tr>
+  <tr><td>FR-13</td><td>Hủy / Xóa đơn hàng</td><td>Cho phép hủy các đơn hàng tạo nhầm; hệ thống tự động hoàn trả số lượng tồn kho. Chặn hủy/xóa đơn đang vận chuyển hoặc đã giao; chặn xóa đơn đã thanh toán mà chưa hoàn tiền. Đơn chuyển khoản quá 24 giờ chưa thanh toán được hệ thống tự động hủy.</td></tr>
+</table>
+
+<h2>3. Bảng đặc tả use case</h2>
+
+<h3>Bảng 3.47: Bảng đặc tả chức năng Sửa thông tin khi đặt hàng</h3>
+<table>
+  <tr><td class="k">Tên UC</td><td>Sửa thông tin khi đặt hàng</td></tr>
+  <tr><td class="k">Actor</td><td>Khách hàng</td></tr>
+  <tr><td class="k">Mô tả UC</td><td>Khách hàng thay đổi họ tên, số điện thoại, địa chỉ người nhận hoặc thêm ghi chú (ví dụ: “Căng vợt 11kg giúp mình”) ngay tại màn hình Đặt hàng, trước khi thanh toán.</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Khách hàng đã đăng nhập, giỏ hàng có ít nhất 1 sản phẩm và đang ở màn hình Đặt hàng.</td></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Thông tin giao nhận mới được áp dụng cho đơn hàng đang đặt (không làm thay đổi hồ sơ khách hàng).</td></tr>
+  <tr><td class="k">Luồng sự kiện chính</td><td><ol>
+    <li>Hệ thống hiển thị form thông tin giao nhận, điền sẵn họ tên, SĐT, địa chỉ từ hồ sơ khách hàng.</li>
+    <li>Khách hàng sửa Họ tên người nhận, SĐT, Địa chỉ nhận hàng và nhập Ghi chú (nếu có).</li>
+    <li>Khách hàng chuyển sang bước Thanh toán (Bảng 3.48).</li>
+    <li>Hệ thống kiểm tra dữ liệu và áp dụng thông tin mới cho đơn hàng.</li>
+  </ol></td></tr>
+  <tr><td class="k">Luồng sự kiện phụ</td><td>
+    A1 – Bỏ trống trường bắt buộc (Họ tên, SĐT, Địa chỉ): hệ thống chặn đặt hàng, báo lỗi chữ đỏ tại trường bị thiếu.<br>
+    A2 – SĐT sai định dạng (không đủ 10 số hoặc không bắt đầu bằng 0): hệ thống báo “Số điện thoại phải gồm đúng 10 số bắt đầu bằng 0”.
+  </td></tr>
+</table>
+
+<h3>Bảng 3.48: Bảng đặc tả chức năng Thanh toán</h3>
+<table>
+  <tr><td class="k">Tên UC</td><td>Thanh toán</td></tr>
+  <tr><td class="k">Actor</td><td>Khách hàng (chính); Nhân viên bán hàng (đối soát và xác nhận nhận tiền)</td></tr>
+  <tr><td class="k">Mô tả UC</td><td>Khách hàng chọn phương thức thanh toán và hoàn tất đặt hàng. Hệ thống hỗ trợ 2 phương thức: <b>Thanh toán khi nhận hàng (COD)</b> và <b>Chuyển khoản ngân hàng / ví điện tử qua mã VietQR</b>. Do chưa tích hợp cổng thanh toán tự động (mục 1.3), giao dịch chuyển khoản được nhân viên đối soát với sao kê ngân hàng và xác nhận trên hệ thống.</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Khách hàng đã đăng nhập; giỏ hàng có ít nhất 1 sản phẩm; thông tin giao nhận hợp lệ (Bảng 3.47); đang ở bước cuối của màn hình Đặt hàng.</td></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Đơn hàng được lưu vào CSDL với 2 trạng thái độc lập là Trạng thái đơn hàng và Trạng thái thanh toán; tồn kho các sản phẩm được trừ tương ứng (giữ hàng cho khách); nếu có áp dụng voucher thì số lượt còn lại của voucher giảm 1; giỏ hàng được làm trống.</td></tr>
+  <tr><td class="k">Luồng sự kiện chính</td><td><ol>
+    <li>Khách hàng chọn phương thức thanh toán: COD hoặc Chuyển khoản / ví điện tử (VietQR).</li>
+    <li>Khách hàng nhấn “Đặt hàng ngay” (COD) hoặc “Đặt hàng &amp; thanh toán” (VietQR).</li>
+    <li>Hệ thống kiểm tra lại tại thời điểm chốt đơn: tồn kho từng sản phẩm, giá bán hiện hành, điều kiện voucher; tính Tổng thanh toán = Tiền hàng + Phí vận chuyển − Giảm giá và so khớp với số tiền khách đang thấy.</li>
+    <li>Hệ thống lưu đơn hàng, chi tiết đơn, trừ tồn kho và trừ 1 lượt voucher (nếu có) trong cùng một giao dịch CSDL:
+      <ul>
+        <li>COD: Trạng thái đơn “Chờ xác nhận”, Trạng thái thanh toán “Chưa thanh toán”.</li>
+        <li>VietQR: Trạng thái đơn “Chờ thanh toán”, Trạng thái thanh toán “Chưa thanh toán”, hạn thanh toán 24 giờ kể từ lúc đặt.</li>
+      </ul></li>
+    <li>Hệ thống làm trống giỏ hàng.</li>
+    <li>Nếu là COD: hệ thống hiển thị màn hình “Đặt hàng thành công” kèm mã đơn hàng. <i>Kết thúc use case.</i></li>
+    <li>Nếu là VietQR: hệ thống hiển thị màn hình thanh toán gồm mã VietQR (số tiền và nội dung “FBSHOP &lt;Mã đơn&gt;” lấy từ đơn đã lưu), thông tin tài khoản nhận và thời gian giữ đơn còn lại.</li>
+    <li>Khách hàng quét mã bằng ứng dụng ngân hàng/ví điện tử, chuyển khoản, sau đó nhấn “Tôi đã chuyển khoản”. Hệ thống ghi nhận thời điểm khách báo và hiển thị “Đang chờ FBShop xác nhận”.</li>
+    <li>Nhân viên bán hàng đối chiếu sao kê (đúng số tiền, đúng nội dung chuyển khoản) và chọn “Xác nhận đã nhận tiền” tại màn hình Quản lý đơn hàng.</li>
+    <li>Hệ thống cập nhật Trạng thái thanh toán “Đã thanh toán”, lưu thời điểm thanh toán và chuyển Trạng thái đơn sang “Chờ xác nhận”. Màn hình thanh toán của khách tự cập nhật “Thanh toán thành công” kèm mã đơn hàng.</li>
+  </ol></td></tr>
+  <tr><td class="k">Luồng sự kiện phụ</td><td>
+    A1 – Hết hàng: Tại bước 3, nếu số lượng đặt vượt tồn kho, hệ thống báo “Sản phẩm [Tên] chỉ còn [n] trong kho” và không tạo đơn. Nếu nhiều khách đặt cùng lúc, hệ thống chỉ trừ kho khi còn đủ hàng; khách đến sau nhận thông báo “Sản phẩm [Tên] vừa hết hàng hoặc không đủ số lượng”.<br>
+    A2 – Số tiền thay đổi: Tại bước 3, nếu giá bán hoặc phí đã thay đổi so với số tiền khách đang thấy, hệ thống báo “Tổng thanh toán đã thay đổi, vui lòng kiểm tra lại giỏ hàng” và không tạo đơn.<br>
+    A3 – Voucher không còn hợp lệ (hết hạn, hết lượt, chưa đủ giá trị tối thiểu): Tại bước 3, hệ thống báo lỗi tương ứng và không tạo đơn. Nếu nhiều khách cùng dùng lượt cuối của một voucher, chỉ một đơn được ghi nhận; các khách còn lại nhận thông báo “Mã giảm giá vừa hết lượt sử dụng. Vui lòng bỏ mã và đặt hàng lại”.<br>
+    A4 – Thanh toán thất bại do quá hạn: Quá 24 giờ mà khách chưa thanh toán và chưa báo chuyển khoản, hệ thống tự động hủy đơn (“Đã hủy”), hoàn trả tồn kho và lượt voucher; màn hình thanh toán hiển thị “Thanh toán thất bại”.<br>
+    A5 – Thanh toán sau: Tại bước 7, nếu khách rời màn hình thanh toán, đơn vẫn ở “Chờ thanh toán”. Khách vào “Đơn hàng của tôi”, chọn “Thanh toán ngay” để quét lại mã mà không phải chọn lại giỏ hàng.<br>
+    A6 – Không nhận được tiền: Tại bước 9, nếu sao kê không có giao dịch hợp lệ, nhân viên liên hệ khách; nếu không xác minh được, nhân viên chọn “Hủy đơn” → đơn “Đã hủy”, hoàn trả tồn kho.<br>
+    A7 – Chuyển sai số tiền hoặc sai nội dung: Nhân viên không xác nhận, liên hệ khách để chuyển bổ sung hoặc hoàn lại khoản đã chuyển.<br>
+    A8 – Đơn 0 đồng (voucher giảm toàn bộ): bỏ qua bước thanh toán; đơn ở “Chờ xác nhận” với Trạng thái thanh toán “Đã thanh toán”.<br>
+    A9 – Khách hủy đơn trong lúc chờ thanh toán: chuyển sang Bảng 3.49.
+  </td></tr>
+</table>
+
+<h3>Bảng 3.49: Bảng đặc tả chức năng Hủy đơn hàng (Khách hàng) – bổ sung mới</h3>
+<table>
+  <tr><td class="k">Tên UC</td><td>Hủy đơn hàng</td></tr>
+  <tr><td class="k">Actor</td><td>Khách hàng</td></tr>
+  <tr><td class="k">Mô tả UC</td><td>Khách hàng tự hủy đơn hàng của mình khi cửa hàng chưa xử lý và đơn chưa được thanh toán.</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Khách hàng đã đăng nhập; đơn hàng thuộc khách hàng; đơn ở trạng thái “Chờ thanh toán” (chưa báo chuyển khoản) hoặc “Chờ xác nhận”, và Trạng thái thanh toán là “Chưa thanh toán”.</td></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Đơn hàng chuyển sang “Đã hủy”, lý do hủy được lưu, tồn kho các sản phẩm trong đơn và lượt voucher đã dùng (nếu có) được hoàn trả.</td></tr>
+  <tr><td class="k">Luồng sự kiện chính</td><td><ol>
+    <li>Khách hàng vào “Đơn hàng của tôi” (hoặc màn hình thanh toán VietQR).</li>
+    <li>Khách hàng nhấn “Hủy đơn” tại đơn cần hủy.</li>
+    <li>Hệ thống hiển thị hộp thoại xác nhận kèm danh sách lý do hủy.</li>
+    <li>Khách hàng chọn lý do và nhấn “Xác nhận hủy”.</li>
+    <li>Hệ thống kiểm tra lại điều kiện hủy của đơn.</li>
+    <li>Hệ thống cập nhật đơn “Đã hủy”, hoàn trả tồn kho và lượt voucher, lưu lý do hủy và thông báo “Đã hủy đơn hàng thành công”.</li>
+  </ol></td></tr>
+  <tr><td class="k">Luồng sự kiện phụ</td><td>
+    A1 – Không đủ điều kiện hủy: Tại bước 5, nếu đơn đã được xử lý, đã thanh toán hoặc khách đã báo chuyển khoản, hệ thống báo “Đơn hàng đã được xử lý hoặc đã thanh toán, vui lòng liên hệ hotline để được hỗ trợ hủy”.<br>
+    A2 – Xung đột cập nhật: Tại bước 6, nếu cửa hàng vừa cập nhật đơn đúng lúc đó, hệ thống không hủy và báo “Đơn hàng vừa được cửa hàng cập nhật, vui lòng tải lại trang”.<br>
+    A3 – Hủy thao tác: Tại bước 4, khách chọn “Không hủy”, hệ thống đóng hộp thoại và giữ nguyên đơn hàng.
+  </td></tr>
+</table>
+
+<h3>Bảng 3.8: Bảng đặc tả chức năng Cập nhật trạng thái đơn hàng</h3>
+<table>
+  <tr><th style="width:24%">Thành phần</th><th>Mô tả chi tiết</th></tr>
+  <tr><td class="k">Tên use case</td><td>Cập nhật trạng thái đơn hàng</td></tr>
+  <tr><td class="k">Tác nhân</td><td>Nhân viên / Người quản lý</td></tr>
+  <tr><td class="k">Mục đích</td><td>Thay đổi trạng thái xử lý của đơn hàng (Chờ thanh toán, Chờ xác nhận, Đang xử lý, Đang giao, Đã giao, Đã hủy) và ghi nhận trạng thái thanh toán tương ứng, nhằm theo dõi chính xác tiến trình đơn hàng và dòng tiền.</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>1. Nhân viên / Người quản lý đã đăng nhập thành công.<br>2. Đơn hàng cần cập nhật đã tồn tại trong CSDL.</td></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Trạng thái đơn hàng và trạng thái thanh toán mới được lưu; nếu đơn bị hủy thì tồn kho và lượt voucher đã dùng được hoàn trả; danh sách đơn hàng được làm mới.</td></tr>
+  <tr><td class="k">Luồng sự kiện chính</td><td><ol>
+    <li>Nhân viên chọn chức năng Quản lý đơn hàng từ menu chính.</li>
+    <li>Hệ thống hiển thị danh sách đơn hàng kèm trạng thái đơn, phương thức và trạng thái thanh toán.</li>
+    <li>Nhân viên chọn một đơn hàng và chọn thao tác chuyển trạng thái tiếp theo.</li>
+    <li>Với thao tác “Xác nhận đã nhận tiền” hoặc “Hủy đơn”, hệ thống hiển thị hộp thoại xác nhận.</li>
+    <li>Nhân viên nhấn Đồng ý.</li>
+    <li>Hệ thống kiểm tra tính hợp lệ của luồng chuyển trạng thái theo quy tắc:
+      <ul>
+        <li>Chờ thanh toán → Chờ xác nhận (“Xác nhận đã nhận tiền”: Trạng thái thanh toán → Đã thanh toán) hoặc → Đã hủy.</li>
+        <li>Chờ xác nhận → Đang xử lý hoặc → Đã hủy.</li>
+        <li>Đang xử lý → Đang giao hoặc → Đã hủy.</li>
+        <li>Đang giao → Đã giao (đơn COD: Trạng thái thanh toán → Đã thanh toán).</li>
+        <li>Đã giao, Đã hủy là trạng thái kết thúc.</li>
+      </ul></li>
+    <li>Hệ thống lưu trạng thái mới; nếu là hủy đơn thì hoàn trả tồn kho và lượt voucher. Hệ thống thông báo “Cập nhật trạng thái đơn hàng thành công” và làm mới danh sách.</li>
+  </ol></td></tr>
+  <tr><td class="k">Luồng sự kiện phụ</td><td>
+    A1 – Chuyển trạng thái không hợp lệ: Tại bước 6, nếu chuyển sai quy trình (ví dụ “Chờ xác nhận” sang “Đã giao”, hoặc sửa đơn “Đã hủy”), hệ thống báo “Luồng chuyển trạng thái không hợp lệ”.<br>
+    A2 – Hủy bỏ thao tác: Tại bước 5, nhân viên chọn Hủy; hệ thống giữ nguyên trạng thái cũ.<br>
+    A3 – Xác nhận đã nhận tiền: Tại bước 4, hệ thống hiển thị số tiền và nội dung chuyển khoản cần đối chiếu; nhân viên chỉ xác nhận sau khi đã kiểm tra sao kê ngân hàng. Đơn khách đã báo chuyển khoản được đánh dấu “Khách báo đã CK – cần đối soát”.<br>
+    A4 – Hủy đơn đã thanh toán: Tại bước 7, nếu đơn đã thanh toán, Trạng thái thanh toán chuyển sang “Chờ hoàn tiền”. Sau khi hoàn tiền cho khách, nhân viên chọn “Đã hoàn tiền”; hệ thống cập nhật “Đã hoàn tiền”.<br>
+    A5 – Xung đột cập nhật: Nếu đơn vừa được người khác cập nhật, hệ thống báo “Đơn hàng vừa được người khác cập nhật. Vui lòng tải lại danh sách” và không ghi đè.
+  </td></tr>
+</table>
+
+<h3>Bảng 3.9: Bảng đặc tả chức năng Xóa đơn hàng (bổ sung luồng phụ A3)</h3>
+<table>
+  <tr><th style="width:24%">Thành phần</th><th>Mô tả chi tiết</th></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Đơn hàng được xóa khỏi CSDL; nếu đơn chưa bị hủy thì tồn kho và lượt voucher được hoàn trả trước khi xóa.</td></tr>
+  <tr><td class="k">Luồng sự kiện phụ</td><td>
+    A1 – Hủy thao tác xóa: giữ nguyên như bản cũ.<br>
+    A2 – Ràng buộc trạng thái (Đang giao / Đã giao): giữ nguyên như bản cũ.<br>
+    A3 – Đơn đã thanh toán chưa hoàn tiền: Tại bước 7, nếu Trạng thái thanh toán là “Đã thanh toán” hoặc “Chờ hoàn tiền”, hệ thống báo “Không thể xóa đơn hàng đã thanh toán. Vui lòng hủy đơn và hoàn tiền cho khách trước” và hủy thao tác.
+  </td></tr>
+</table>
+
+<h2>4. Bổ sung thiết kế CSDL – bảng DonHang</h2>
+<table>
+  <tr><th style="width:26%">Thuộc tính</th><th style="width:20%">Kiểu dữ liệu</th><th>Mô tả</th></tr>
+  <tr><td>TrangThaiThanhToan</td><td>VARCHAR(30)</td><td>Chưa thanh toán / Đã thanh toán / Chờ hoàn tiền / Đã hoàn tiền. Mặc định: Chưa thanh toán.</td></tr>
+  <tr><td>NgayThanhToan</td><td>DATETIME, NULL</td><td>Thời điểm cửa hàng xác nhận đã nhận tiền (chuyển khoản) hoặc giao thành công (COD).</td></tr>
+  <tr><td>NgayBaoChuyenKhoan</td><td>DATETIME, NULL</td><td>Thời điểm khách nhấn “Tôi đã chuyển khoản”; đơn có giá trị này không bị tự hủy khi quá hạn mà chờ nhân viên đối soát.</td></tr>
+</table>
+
+<h2>5. Quan hệ giữa trạng thái đơn và trạng thái thanh toán</h2>
+<table>
+  <tr><th>Tình huống</th><th>Trạng thái đơn hàng</th><th>Trạng thái thanh toán</th><th>Tồn kho</th></tr>
+  <tr><td>Đặt đơn COD</td><td>Chờ xác nhận</td><td>Chưa thanh toán</td><td>Trừ</td></tr>
+  <tr><td>Đặt đơn VietQR</td><td>Chờ thanh toán (24h)</td><td>Chưa thanh toán</td><td>Trừ (giữ hàng)</td></tr>
+  <tr><td>Nhân viên xác nhận đã nhận tiền</td><td>Chờ xác nhận</td><td>Đã thanh toán</td><td>—</td></tr>
+  <tr><td>Quá 24h chưa thanh toán / không nhận được tiền</td><td>Đã hủy</td><td>Chưa thanh toán</td><td>Hoàn trả</td></tr>
+  <tr><td>Đơn COD giao thành công</td><td>Đã giao</td><td>Đã thanh toán</td><td>—</td></tr>
+  <tr><td>Khách tự hủy (chưa xử lý, chưa thanh toán)</td><td>Đã hủy</td><td>Chưa thanh toán</td><td>Hoàn trả</td></tr>
+  <tr><td>Cửa hàng hủy đơn đã thanh toán</td><td>Đã hủy</td><td>Chờ hoàn tiền → Đã hoàn tiền</td><td>Hoàn trả</td></tr>
+</table>
+
+<h2>6. Vẽ lại biểu đồ hoạt động Thanh toán (mục 3.2.3.12.2)</h2>
+<p>Mã PlantUML dưới đây dán vào <code>plantuml.com/plantuml</code> (hoặc draw.io → Arrange → Insert → Advanced → PlantUML) để xuất hình:</p>
+<pre>@startuml
+|Khách hàng|
+start
+:Chọn phương thức thanh toán;
+:Nhấn "Đặt hàng";
+|Hệ thống|
+:Kiểm tra lại tồn kho, giá bán, voucher;
+if (Hợp lệ?) then (không)
+  :Thông báo lỗi (hết hàng / giá thay đổi / voucher);
+  stop
+else (có)
+endif
+:Lưu đơn hàng + trừ tồn kho (1 giao dịch);
+:Làm trống giỏ hàng;
+if (Phương thức?) then (COD)
+  :Đơn "Chờ xác nhận"\nThanh toán "Chưa thanh toán";
+  :Hiển thị "Đặt hàng thành công";
+  stop
+else (VietQR)
+  :Đơn "Chờ thanh toán" (hạn 24h);
+  :Hiển thị mã VietQR + thời gian còn lại;
+endif
+|Khách hàng|
+:Quét mã, chuyển khoản;
+:Nhấn "Tôi đã chuyển khoản";
+|Hệ thống|
+:Ghi nhận khách báo đã chuyển khoản;
+|Nhân viên bán hàng|
+:Đối soát sao kê ngân hàng;
+if (Nhận đủ tiền, đúng nội dung?) then (có)
+  :Chọn "Xác nhận đã nhận tiền";
+  |Hệ thống|
+  :Thanh toán "Đã thanh toán"\nĐơn "Chờ xác nhận";
+  :Hiển thị "Thanh toán thành công";
+  stop
+else (không)
+  :Liên hệ khách;
+  :Chọn "Hủy đơn";
+  |Hệ thống|
+  :Đơn "Đã hủy", hoàn trả tồn kho;
+  :Hiển thị "Thanh toán thất bại";
+  stop
+endif
+@enduml</pre>
+
+<div class="note">
+  <b>Lưu ý đánh số bảng:</b> trong tài liệu hiện có 2 bảng cùng số 3.48 (“Thanh toán” và “Thêm tài khoản”). Sau khi thêm Bảng 3.49 – Hủy đơn hàng (Khách hàng), cần đánh lại số các bảng phía sau: Thêm tài khoản → 3.50, Sửa tài khoản → 3.51, Xóa tài khoản → 3.52, Đổi mật khẩu → 3.53, Đăng nhập → 3.54. Nhớ cập nhật lại các tham chiếu bảng trong bài nếu có.
+</div>
+
+</body>
+</html>

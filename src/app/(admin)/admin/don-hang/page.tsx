@@ -20,7 +20,14 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { exportToExcel } from "@/lib/exportExcel";
-import { ORDER_STATUS, ORDER_UNDELETABLE, orderStatusLabel } from "@/lib/orderStatus";
+import {
+  ORDER_STATUS,
+  ORDER_UNDELETABLE,
+  PAYMENT_STATUS,
+  orderStatusLabel,
+  paymentMethodLabel,
+  paymentStatusLabel,
+} from "@/lib/orderStatus";
 
 interface OrderItem {
   MaDH: string;
@@ -31,6 +38,9 @@ interface OrderItem {
   SdtNguoiNhan: string;
   DiaChiNhan: string;
   PhuongThucThanhToan: string;
+  TrangThaiThanhToan: string;
+  NgayThanhToan: string | null;
+  NgayBaoChuyenKhoan: string | null;
   GhiChu: string | null;
   KhachHang: {
     MaKH: string;
@@ -99,12 +109,27 @@ export default function AdminDonHangPage() {
     fetchOrders();
   }, []);
 
-  const handleUpdateStatus = async (maDH: string, newStatus: string) => {
+  const handleUpdateStatus = async (o: OrderItem, newStatus: string) => {
+    const maDH = o.MaDH;
+    // Xac nhan nhan tien: nhan vien phai doi soat sao ke truoc (he thong chua tich hop cong thanh toan)
     if (
-      newStatus === ORDER_STATUS.CANCELLED &&
-      !confirm("Hủy đơn hàng này? Tồn kho các sản phẩm trong đơn sẽ được hoàn trả.")
+      o.TrangThai === ORDER_STATUS.WAITING_PAYMENT &&
+      newStatus === ORDER_STATUS.PENDING &&
+      !confirm(
+        `Xác nhận ĐÃ NHẬN ${Number(o.TongTien).toLocaleString("vi-VN")}đ chuyển khoản với nội dung "FBSHOP ${o.MaDH}"?
+Chỉ xác nhận sau khi đã kiểm tra sao kê ngân hàng.`
+      )
     ) {
       return;
+    }
+    if (newStatus === ORDER_STATUS.CANCELLED) {
+      const msg =
+        o.TrangThaiThanhToan === PAYMENT_STATUS.PAID
+          ? "Đơn này khách ĐÃ THANH TOÁN. Hủy đơn sẽ hoàn trả tồn kho và chuyển sang Chờ hoàn tiền cho khách. Tiếp tục?"
+          : o.TrangThai === ORDER_STATUS.WAITING_PAYMENT
+          ? "Hủy đơn vì không nhận được tiền chuyển khoản? Tồn kho sẽ được hoàn trả."
+          : "Hủy đơn hàng này? Tồn kho các sản phẩm trong đơn sẽ được hoàn trả.";
+      if (!confirm(msg)) return;
     }
     setUpdatingId(maDH);
     try {
@@ -120,6 +145,25 @@ export default function AdminDonHangPage() {
       } else {
         toast.success(data.message || "Cập nhật trạng thái thành công");
         fetchOrders();
+      }
+    } catch {
+      toast.error("Lỗi kết nối máy chủ");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleRefund = async (o: OrderItem) => {
+    if (!confirm(`Xác nhận đã hoàn ${Number(o.TongTien).toLocaleString("vi-VN")}đ cho khách ${o.TenNguoiNhan}?`)) return;
+    setUpdatingId(o.MaDH);
+    try {
+      const res = await fetch(`/api/admin/don-hang/${o.MaDH}/hoan-tien`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message);
+        fetchOrders();
+      } else {
+        toast.error(data.error || "Không thể cập nhật");
       }
     } catch {
       toast.error("Lỗi kết nối máy chủ");
@@ -159,7 +203,9 @@ export default function AdminDonHangPage() {
       "Số điện thoại": o.SdtNguoiNhan,
       "Địa chỉ giao": o.DiaChiNhan,
       "Tổng tiền (VNĐ)": Number(o.TongTien),
-      "Phương thức": o.PhuongThucThanhToan,
+      "Phương thức": paymentMethodLabel(o.PhuongThucThanhToan),
+      "Thanh toán": paymentStatusLabel(o.TrangThaiThanhToan),
+      "Ngày thanh toán": o.NgayThanhToan ? new Date(o.NgayThanhToan).toLocaleString("vi-VN") : "",
       "Mã Voucher": o.Voucher?.MaVoucher || "Không dùng",
       "Trạng thái": orderStatusLabel(o.TrangThai),
       "Ghi chú": o.GhiChu || "",
@@ -177,7 +223,7 @@ export default function AdminDonHangPage() {
           className: "bg-slate-50 text-slate-700 border-slate-300",
           icon: Clock,
           next: "Cho xac nhan",
-          nextLabel: "Đã nhận tiền",
+          nextLabel: "Xác nhận đã nhận tiền",
         };
       case "Cho xac nhan":
       case "Pending":
@@ -315,6 +361,7 @@ export default function AdminDonHangPage() {
                 <th className="px-4 py-3">Khách Hàng / Nhận</th>
                 <th className="px-4 py-3">Số Mặt Hàng</th>
                 <th className="px-4 py-3 text-right">Tổng Tiền</th>
+                <th className="px-4 py-3 text-center">Thanh Toán</th>
                 <th className="px-4 py-3 text-center">Trạng Thái</th>
                 <th className="px-4 py-3 text-center">Duyệt Trạng Thái</th>
                 <th className="px-4 py-3 text-right">Thao Tác</th>
@@ -323,13 +370,13 @@ export default function AdminDonHangPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">
                     Đang tải danh sách đơn hàng...
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">
                     Không tìm thấy đơn hàng phù hợp
                   </td>
                 </tr>
@@ -369,6 +416,34 @@ export default function AdminDonHangPage() {
                         {Number(o.TongTien).toLocaleString("vi-VN")} đ
                       </td>
                       <td className="px-4 py-3 text-center">
+                        <p className="text-[10px] text-slate-500">{o.PhuongThucThanhToan === "COD" ? "COD" : "Chuyển khoản"}</p>
+                        <span
+                          className={`mt-0.5 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                            o.TrangThaiThanhToan === PAYMENT_STATUS.PAID
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : o.TrangThaiThanhToan === PAYMENT_STATUS.REFUND_PENDING
+                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              : o.TrangThaiThanhToan === PAYMENT_STATUS.REFUNDED
+                              ? "border-slate-200 bg-slate-50 text-slate-600"
+                              : "border-slate-200 bg-white text-slate-500"
+                          }`}
+                        >
+                          {paymentStatusLabel(o.TrangThaiThanhToan)}
+                        </span>
+                        {o.TrangThai === ORDER_STATUS.WAITING_PAYMENT && o.NgayBaoChuyenKhoan && (
+                          <p className="mt-1 text-[10px] font-bold text-blue-600">Khách báo đã CK – cần đối soát</p>
+                        )}
+                        {o.TrangThaiThanhToan === PAYMENT_STATUS.REFUND_PENDING && (
+                          <button
+                            disabled={updatingId === o.MaDH}
+                            onClick={() => handleRefund(o)}
+                            className="mt-1 rounded-lg bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 hover:bg-amber-500/20 disabled:opacity-50"
+                          >
+                            Đã hoàn tiền
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
                         <span
                           className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${badge.className}`}
                         >
@@ -381,7 +456,7 @@ export default function AdminDonHangPage() {
                           {badge.next && (
                             <button
                               disabled={updatingId === o.MaDH}
-                              onClick={() => handleUpdateStatus(o.MaDH, badge.next!)}
+                              onClick={() => handleUpdateStatus(o, badge.next!)}
                               className="inline-flex items-center gap-1 rounded-lg bg-orange-500/10 px-2.5 py-1 text-[11px] font-bold text-[#f66315] hover:bg-[#f66315] hover:text-white transition-all disabled:opacity-50"
                             >
                               <span>{badge.nextLabel}</span>
@@ -391,7 +466,7 @@ export default function AdminDonHangPage() {
                           {canCancel && (
                             <button
                               disabled={updatingId === o.MaDH}
-                              onClick={() => handleUpdateStatus(o.MaDH, "Da huy")}
+                              onClick={() => handleUpdateStatus(o, "Da huy")}
                               className="rounded-lg border border-red-200 bg-red-50/60 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 transition-all disabled:opacity-50"
                               title="Hủy đơn và hoàn tồn kho"
                             >
@@ -409,7 +484,9 @@ export default function AdminDonHangPage() {
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </button>
-                          {!ORDER_UNDELETABLE.includes(o.TrangThai) && (
+                          {!ORDER_UNDELETABLE.includes(o.TrangThai) &&
+                            o.TrangThaiThanhToan !== PAYMENT_STATUS.PAID &&
+                            o.TrangThaiThanhToan !== PAYMENT_STATUS.REFUND_PENDING && (
                             <button
                               onClick={() => handleDeleteOrder(o.MaDH)}
                               className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
@@ -460,6 +537,16 @@ export default function AdminDonHangPage() {
                   <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
                   <span>{viewingOrder.DiaChiNhan}</span>
                 </div>
+                <p className="pl-6 text-slate-600">
+                  Thanh toán: <strong>{paymentMethodLabel(viewingOrder.PhuongThucThanhToan)}</strong> –{" "}
+                  <strong>{paymentStatusLabel(viewingOrder.TrangThaiThanhToan)}</strong>
+                  {viewingOrder.NgayThanhToan && <> lúc {new Date(viewingOrder.NgayThanhToan).toLocaleString("vi-VN")}</>}
+                </p>
+                {viewingOrder.NgayBaoChuyenKhoan && (
+                  <p className="pl-6 text-blue-600">
+                    Khách báo đã chuyển khoản lúc {new Date(viewingOrder.NgayBaoChuyenKhoan).toLocaleString("vi-VN")}
+                  </p>
+                )}
                 {viewingOrder.Voucher && (
                   <div className="flex items-center gap-2 text-orange-600 font-bold">
                     <Tag className="h-4 w-4" />

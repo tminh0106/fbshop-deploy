@@ -7,7 +7,7 @@ import { checkKeyword, optionalText, parseIntInRange, requiredText } from "@/lib
 // =======================================================
 // HANG HOA KHO (LO HANG) - Bang 3.12 (Them), 3.13 (Sua), 3.14 (Xoa), 3.15 (Tim kiem) - FR-15
 // Ton kho thuc te cua san pham = SanPham.SoLuong. Moi lo hang la ban ghi nhap kho:
-// - Lo sinh tu phieu nhap (GhiChu bat dau "[HDK-...]"): so luong & don gia khoa theo phieu,
+// - Lo sinh tu phieu nhap (GhiChu bat dau "[PN-...]", phieu cu "[HDK-...]"): so luong & don gia khoa theo phieu,
 //   chi sua vi tri / han su dung / ghi chu; khong xoa duoc (phai huy phieu hoac lap phieu xuat).
 // - Lo them tay (ton dau ky / kiem ke): them -> cong ton, sua SL -> cong/tru chenh lech, xoa -> tru ton.
 // =======================================================
@@ -23,8 +23,8 @@ const HAS_HISTORY =
 class BusinessError extends Error {}
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
-// Tach ma phieu nhap gan o dau ghi chu: "[HDK-NHAP-...] noi dung"
-const TAG_RE = /^\[(HDK-[^\]]+)\]\s*/;
+// Tach so phieu nhap gan o dau ghi chu: "[PN-20261001-001] noi dung" (phieu cu: "[HDK-NHAP-...]")
+const TAG_RE = /^\[((?:PN|HDK)-[^\]]+)\]\s*/;
 function splitNote(note: string | null) {
   const hit = note ? TAG_RE.exec(note) : null;
   return { maHDK: hit ? hit[1] : null, text: note ? note.replace(TAG_RE, "") : "" };
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
 
     const ghiChu = optionalText(body.ghiChu, "ghi chú", 450);
     if (!ghiChu.ok) return bad(ghiChu.error);
-    if (ghiChu.value && TAG_RE.test(ghiChu.value)) return bad("Ghi chú không được bắt đầu bằng mã phiếu [HDK-...]");
+    if (ghiChu.value && TAG_RE.test(ghiChu.value)) return bad("Ghi chú không được bắt đầu bằng số phiếu nhập trong ngoặc vuông");
     const han = parseExpiry(body.hanSuDung);
     if (!han.ok) return bad("Hạn sử dụng không hợp lệ");
 
@@ -166,7 +166,7 @@ export async function PUT(request: Request) {
     if (!viTri.ok) return bad(viTri.error);
     const ghiChu = optionalText(body.ghiChu, "ghi chú", 450);
     if (!ghiChu.ok) return bad(ghiChu.error);
-    if (ghiChu.value && TAG_RE.test(ghiChu.value)) return bad("Ghi chú không được bắt đầu bằng mã phiếu [HDK-...]");
+    if (ghiChu.value && TAG_RE.test(ghiChu.value)) return bad("Ghi chú không được bắt đầu bằng số phiếu nhập trong ngoặc vuông");
     const han = body.hanSuDung === undefined ? { ok: true as const, value: lot.HanSuDung } : parseExpiry(body.hanSuDung);
     if (!han.ok) return bad("Hạn sử dụng không hợp lệ");
 

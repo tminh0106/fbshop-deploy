@@ -1,16 +1,39 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { getCurrentCustomer } from "@/lib/auth";
+import { ORDER_STATUS, PAYMENT_STATUS, canCustomerCancel } from "@/lib/orderStatus";
+import { cancelExpiredUnpaidOrders, paymentDeadline } from "@/lib/orderExpiry";
 
 // Phuong thuc thanh toan trang dat hang gui len (COD / chuyen khoan QR)
 const PAYMENT_METHODS = ["COD", "BANKING"];
 const MAX_QTY_PER_ITEM = 999;
 const STOPPED_TAG = "[NGỪNG KINH DOANH]";
+// Phi van chuyen: mien phi tu 1.000.000d tien hang (khop voi trang dat hang)
+const FREE_SHIP_FROM = 1_000_000;
+const SHIPPING_FEE = 30_000;
 
 // Het hang giua luc kiem tra va luc tru ton (nhieu khach dat cung luc)
 class OutOfStockError extends Error {
   constructor(public productName: string) {
     super("OUT_OF_STOCK");
+  }
+}
+
+// Voucher vua het luot giua luc kiem tra va luc tru luot (nhieu khach dung ma cuoi cung luc)
+class VoucherExhaustedError extends Error {}
+
+// MySQL huy 1 trong 2 giao dich ghi cung luc (deadlock / write conflict - P2034): thu lai.
+// Lan thu lai doc du lieu moi nen se bao dung "het hang" / "het luot voucher" neu co.
+async function withDeadlockRetry<T>(run: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await run();
+    } catch (err) {
+      const deadlock = err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
+      if (!deadlock || i >= attempts) throw err;
+      await new Promise((r) => setTimeout(r, 50 * i + Math.random() * 50));
+    }
   }
 }
 
@@ -23,6 +46,9 @@ export async function GET() {
     if (!customer) {
       return NextResponse.json({ error: "Vui lòng đăng nhập để xem đơn hàng" }, { status: 401 });
     }
+
+    // Don chuyen khoan qua han thanh toan -> tu huy, tra hang ve kho
+    await cancelExpiredUnpaidOrders(customer.MaKH);
 
     const orders = await prisma.donHang.findMany({
       where: { MaKH: customer.MaKH },
@@ -46,6 +72,10 @@ export async function GET() {
       recipientPhone: o.SdtNguoiNhan,
       recipientAddress: o.DiaChiNhan,
       paymentMethod: o.PhuongThucThanhToan,
+      paymentStatus: o.TrangThaiThanhToan,
+      paymentReportedAt: o.NgayBaoChuyenKhoan,
+      paymentDeadline: o.TrangThai === ORDER_STATUS.WAITING_PAYMENT ? paymentDeadline(o.NgayTao) : null,
+      canCancel: canCustomerCancel(o),
       note: o.GhiChu,
       voucher: o.Voucher ? {
         code: o.Voucher.MaVoucher,
@@ -84,6 +114,9 @@ export async function POST(request: Request) {
       );
     }
 
+    // Tra hang cua cac don chuyen khoan qua han ve kho truoc khi kiem tra ton
+    await cancelExpiredUnpaidOrders();
+
     const body = await request.json();
     const {
       tenNguoiNhan,
@@ -93,6 +126,7 @@ export async function POST(request: Request) {
       ghiChu,
       maVoucher,
       items,
+      tongTienDuKien,
     } = body;
 
     // BUOC 2: Validate thong tin giao hang
@@ -228,14 +262,29 @@ export async function POST(request: Request) {
     }
 
     // BUOC 5: Tinh tong tien
-    const phiVanChuyen = tongTienHang >= 1000000 ? 0 : 30000;
+    const phiVanChuyen = tongTienHang >= FREE_SHIP_FROM ? 0 : SHIPPING_FEE;
     let tongTien = tongTienHang + phiVanChuyen - giamGia;
     if (tongTien < 0) tongTien = 0;
+    // Tien VND khong co so le (giam theo % co the ra so le)
+    tongTien = Math.round(tongTien);
+
+    // So tien khach thay tren trang dat hang phai khop so tien he thong tinh (gia SP co the vua thay doi)
+    if (tongTienDuKien !== undefined && Math.abs(Math.round(Number(tongTienDuKien)) - tongTien) > 1) {
+      return NextResponse.json(
+        {
+          error: `Tổng thanh toán đã thay đổi (giá sản phẩm vừa được cập nhật): ${tongTien.toLocaleString("vi-VN")}đ. Vui lòng kiểm tra lại giỏ hàng.`,
+          tongTien,
+        },
+        { status: 409 }
+      );
+    }
 
     // BUOC 6: Tao don hang trong Transaction
-    const orderStatus = phuongThucThanhToan === "COD" ? "Cho xac nhan" : "Cho thanh toan";
+    // COD -> cho shop xac nhan; chuyen khoan -> cho khach thanh toan (don 0d khong can chuyen khoan)
+    const orderStatus =
+      phuongThucThanhToan === "BANKING" && tongTien > 0 ? ORDER_STATUS.WAITING_PAYMENT : ORDER_STATUS.PENDING;
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await withDeadlockRetry(() => prisma.$transaction(async (tx) => {
       // a) Tao DonHang
       const newOrder = await tx.donHang.create({
         data: {
@@ -244,6 +293,8 @@ export async function POST(request: Request) {
           DiaChiNhan: diaChiNhan.trim(),
           PhuongThucThanhToan: phuongThucThanhToan,
           TrangThai: orderStatus,
+          // Don 0d (giam gia het) coi nhu da thanh toan; con lai chua thanh toan cho den khi shop nhan tien
+          TrangThaiThanhToan: tongTien === 0 ? PAYMENT_STATUS.PAID : PAYMENT_STATUS.UNPAID,
           GhiChu: ghiChu?.trim() || null,
           TongTien: tongTien,
           MaKH: customer.MaKH,
@@ -272,19 +323,17 @@ export async function POST(request: Request) {
       }
 
       // c) Giam luot dung voucher neu co
+      // Chi tru khi con luot (khong de so luot bi am); het luot -> huy ca giao dich dat hang
       if (validVoucher) {
-        await tx.voucher.update({
-          where: { MaVoucher: validVoucher.MaVoucher },
-          data: {
-            TongSoLuong: {
-              decrement: 1,
-            },
-          },
+        const used = await tx.voucher.updateMany({
+          where: { MaVoucher: validVoucher.MaVoucher, TongSoLuong: { gt: 0 } },
+          data: { TongSoLuong: { decrement: 1 } },
         });
+        if (used.count === 0) throw new VoucherExhaustedError();
       }
 
       return newOrder;
-    });
+    }));
 
     // BUOC 7: Tra ket qua
     return NextResponse.json({
@@ -294,9 +343,16 @@ export async function POST(request: Request) {
         tongTien: Number(result.TongTien),
         trangThai: result.TrangThai,
         phuongThucThanhToan: result.PhuongThucThanhToan,
+        hanThanhToan: result.TrangThai === ORDER_STATUS.WAITING_PAYMENT ? paymentDeadline(result.NgayTao) : null,
       },
     });
   } catch (error: any) {
+    if (error instanceof VoucherExhaustedError) {
+      return NextResponse.json(
+        { error: "Mã giảm giá vừa hết lượt sử dụng. Vui lòng bỏ mã và đặt hàng lại." },
+        { status: 409 }
+      );
+    }
     if (error instanceof OutOfStockError) {
       return NextResponse.json(
         { error: `Sản phẩm "${error.productName}" vừa hết hàng hoặc không đủ số lượng. Vui lòng kiểm tra lại giỏ hàng.` },

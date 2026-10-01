@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { createSlug } from "@/lib/utils";
+import { cancelExpiredUnpaidOrders } from "@/lib/orderExpiry";
 
 export async function GET(
   request: Request,
@@ -8,6 +9,8 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
+
+    await cancelExpiredUnpaidOrders();
 
     if (!slug) {
       return NextResponse.json({ error: "Thiếu mã hoặc slug sản phẩm" }, { status: 400 });
@@ -31,6 +34,8 @@ export async function GET(
       return NextResponse.json({ error: "Không tìm thấy sản phẩm" }, { status: 404 });
     }
 
+    // San pham ngung kinh doanh: van xem duoc (link cu) nhung khong ban -> ton = 0, an the danh dau khoi mo ta
+    const stopped = !!product.MoTa?.includes("[NGỪNG KINH DOANH]");
     const priceNum = Number(product.GiaBan);
     return NextResponse.json({
       product: {
@@ -38,10 +43,11 @@ export async function GET(
         name: product.TenSP,
         slug: createSlug(product.TenSP),
         price: priceNum,
-        stock: product.SoLuong,
+        stock: stopped ? 0 : product.SoLuong,
+        discontinued: stopped,
         weight: product.TrongLuong,
         imageUrl: product.HinhAnh || "/images/placeholder.png",
-        description: product.MoTa,
+        description: product.MoTa?.replace("[NGỪNG KINH DOANH]", "").trim() || null,
         category: product.DanhMuc ? {
           id: product.DanhMuc.MaDanhMuc,
           name: product.DanhMuc.TenDanhMuc,

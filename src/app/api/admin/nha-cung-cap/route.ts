@@ -14,6 +14,25 @@ import {
   optionalText,
   requiredText,
 } from "@/lib/validation";
+import { XUAT_TRA_NCC, invoiceDebt } from "@/lib/warehouse";
+
+// Cong no tung NCC = tong (tien phieu nhap - da thanh toan) cua cac phieu nhap chua huy
+//                    - gia tri hang xuat tra NCC (No 331 / Co 156), toi thieu 0
+async function debtByNCC(maNCC?: string): Promise<Record<string, number>> {
+  const invoices = await prisma.hoaDonKho.findMany({
+    where: { MaNCC: maNCC ?? { not: null }, NOT: { TrangThai: { in: ["Da huy", "Cancelled"] } } },
+    select: { MaNCC: true, LoaiPhieu: true, NghiepVu: true, TrangThai: true, TongTien: true, DaThanhToan: true },
+  });
+  const map: Record<string, number> = {};
+  for (const inv of invoices) {
+    if (!inv.MaNCC) continue;
+    const delta =
+      inv.LoaiPhieu === "NHAP" ? invoiceDebt(inv) : inv.NghiepVu === XUAT_TRA_NCC ? -Number(inv.TongTien) : 0;
+    map[inv.MaNCC] = (map[inv.MaNCC] || 0) + delta;
+  }
+  for (const k of Object.keys(map)) map[k] = Math.max(0, map[k]);
+  return map;
+}
 
 // =======================================================
 // NHA CUNG CAP - Bang 3.22 (Them), 3.23 (Sua), 3.24 (Xoa), 3.25 (Tim kiem) - FR-21
@@ -119,7 +138,7 @@ export async function GET(request: Request) {
     }
     if (searchParams.get("activeOnly") === "1") where.TrangThai = { not: STATUS_STOPPED };
 
-    const [suppliers, allCodes] = await Promise.all([
+    const [suppliers, allCodes, debts] = await Promise.all([
       prisma.nhaCungCap.findMany({
         where,
         include: { _count: { select: { HoaDonKhos: true } } },
@@ -127,11 +146,12 @@ export async function GET(request: Request) {
         orderBy: { MaNCC: "desc" },
       }),
       prisma.nhaCungCap.findMany({ select: { MaNCC: true } }),
+      debtByNCC(),
     ]);
 
     return NextResponse.json({
       success: true,
-      data: suppliers,
+      data: suppliers.map((s) => ({ ...s, CongNo: debts[s.MaNCC] || 0 })),
       nextMaNCC: nextCode("NCC", allCodes.map((c) => c.MaNCC)),
     });
   } catch (error) {
@@ -217,6 +237,14 @@ export async function DELETE(request: Request) {
 
     const ncc = await prisma.nhaCungCap.findUnique({ where: { MaNCC: maNCC } });
     if (!ncc) return bad("Nhà cung cấp không tồn tại", 404);
+
+    // Bang 3.24 A2 - Con cong no chua tat toan -> chan xoa
+    const congNo = (await debtByNCC(maNCC))[maNCC] || 0;
+    if (congNo > 0) {
+      return bad(
+        `Không thể xóa do nhà cung cấp vẫn còn công nợ chưa tất toán. (Còn nợ: ${congNo.toLocaleString("vi-VN")}đ)`
+      );
+    }
 
     const invoiceCount = await prisma.hoaDonKho.count({ where: { MaNCC: maNCC } });
     if (invoiceCount > 0) {

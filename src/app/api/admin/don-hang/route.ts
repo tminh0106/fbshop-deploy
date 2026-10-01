@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { requireFeature } from "@/lib/auth";
 import { checkKeyword } from "@/lib/validation";
+import { cancelExpiredUnpaidOrders } from "@/lib/orderExpiry";
 
 // GET: Danh sach don hang
 export async function GET(request: Request) {
@@ -22,6 +23,9 @@ export async function GET(request: Request) {
     if (tuNgay && denNgay && tuNgay > denNgay) {
       return NextResponse.json({ error: "Khoảng thời gian tìm kiếm không hợp lệ" }, { status: 400 });
     }
+
+    // Don chuyen khoan qua han thanh toan -> tu huy, tra hang ve kho
+    await cancelExpiredUnpaidOrders();
 
     const where: Prisma.DonHangWhereInput = {};
 

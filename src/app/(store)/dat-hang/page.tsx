@@ -30,10 +30,12 @@ interface VoucherInfo {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, getTotalPrice } = useCartStore();
+  const { items, getTotalPrice, clearCart, syncWithServer } = useCartStore();
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // Da tao don & xoa gio -> hien man hinh chuyen trang thay vi "gio hang trong"
+  const [orderPlaced, setOrderPlaced] = useState(false);
 
   // Form states
   const [tenNguoiNhan, setTenNguoiNhan] = useState("");
@@ -50,6 +52,13 @@ export default function CheckoutPage() {
 
   // Form error states
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Cap nhat gia / ton kho trong gio theo CSDL truoc khi khach xem tong tien
+  useEffect(() => {
+    syncWithServer()
+      .then((changes) => changes.forEach((c) => toast(c, { icon: "ℹ️" })))
+      .catch(() => {});
+  }, [syncWithServer]);
 
   useEffect(() => {
     // Kiem tra xac thuc nguoi dung
@@ -146,6 +155,8 @@ export default function CheckoutPage() {
         phuongThucThanhToan,
         ghiChu: ghiChu.trim() || undefined,
         maVoucher: appliedVoucher ? appliedVoucher.maVoucher : undefined,
+        // Server doi chieu: so tien khach thay phai khop so tien he thong tinh
+        tongTienDuKien: finalTotal,
         items: items.map((item) => ({
           maSP: item.productId,
           soLuong: item.quantity,
@@ -163,14 +174,23 @@ export default function CheckoutPage() {
       if (!res.ok) {
         toast.error(data.error || "Đặt hàng thất bại");
         setSubmitting(false);
+        // Gia / ton kho vua thay doi: dong bo lai gio de tong tien hien thi dung, bo voucher de kiem tra lai
+        if (res.status === 409) {
+          const changes = await syncWithServer().catch(() => []);
+          changes.forEach((c) => toast(c, { icon: "ℹ️" }));
+          setAppliedVoucher(null);
+        }
       } else {
-        toast.success("Đặt hàng thành công!");
-        if (phuongThucThanhToan === "COD") {
-          router.push(`/dat-hang/thanh-cong?maDH=${data.order.maDH}`);
+        // Don da tao va da giu hang trong kho -> xoa gio ngay (tranh dat trung neu khach roi trang QR)
+        setOrderPlaced(true);
+        clearCart();
+        const maDH = encodeURIComponent(data.order.maDH);
+        if (data.order.trangThai === "Cho thanh toan") {
+          toast.success("Đã tạo đơn hàng, vui lòng chuyển khoản để hoàn tất");
+          router.push(`/dat-hang/thanh-toan-qr?maDH=${maDH}`);
         } else {
-          router.push(
-            `/dat-hang/thanh-toan-qr?maDH=${data.order.maDH}&tongTien=${data.order.tongTien}`
-          );
+          toast.success("Đặt hàng thành công!");
+          router.push(`/dat-hang/thanh-cong?maDH=${maDH}`);
         }
       }
     } catch {
@@ -179,11 +199,11 @@ export default function CheckoutPage() {
     }
   };
 
-  if (loadingUser) {
+  if (loadingUser || orderPlaced) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
         <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-orange-200 border-t-[#f66315]" />
-        <p className="mt-4 text-sm text-slate-500">Đang chuẩn bị trang thanh toán...</p>
+        <p className="mt-4 text-sm text-slate-500">{orderPlaced ? "Đang chuyển đến trang đơn hàng..." : "Đang chuẩn bị trang thanh toán..."}</p>
       </div>
     );
   }
@@ -421,10 +441,11 @@ export default function CheckoutPage() {
                     />
                     <div>
                       <p className="text-sm font-bold text-slate-800">
-                        Chuyển khoản ngân hàng (Quét mã VietQR)
+                        Chuyển khoản ngân hàng / ví điện tử (VietQR)
                       </p>
                       <p className="text-xs text-slate-500">
-                        Quét mã QR qua app ngân hàng hoặc MoMo, xác nhận giao dịch tự động
+                        Quét mã VietQR bằng app ngân hàng hoặc ví điện tử. Đơn được giữ hàng 24 giờ, FBShop xác nhận
+                        sau khi đối soát giao dịch
                       </p>
                     </div>
                   </div>
@@ -515,7 +536,7 @@ export default function CheckoutPage() {
                   </div>
                 ) : (
                   <>
-                    <span>ĐẶT HÀNG NGAY</span>
+                    <span>{phuongThucThanhToan === "BANKING" ? "ĐẶT HÀNG & THANH TOÁN" : "ĐẶT HÀNG NGAY"}</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

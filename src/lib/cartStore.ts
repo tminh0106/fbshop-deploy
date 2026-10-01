@@ -9,6 +9,7 @@ interface CartStore {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  syncWithServer: () => Promise<string[]>;
   getTotalItems: () => number;
   getTotalPrice: () => number;
 }
@@ -96,6 +97,46 @@ export const useCartStore = create<CartStore>()(
 
       clearCart: () => {
         set({ items: [] });
+      },
+
+      // Cap nhat gia / ton kho theo CSDL; bo san pham ngung kinh doanh hoac het hang.
+      // Tra ve danh sach thay doi de giao dien thong bao cho khach.
+      syncWithServer: async () => {
+        const current = get().items;
+        if (current.length === 0) return [];
+        const res = await fetch("/api/gio-hang/dong-bo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ maSP: current.map((i) => i.productId) }),
+        });
+        if (!res.ok) return [];
+        const { products } = (await res.json()) as {
+          products: { maSP: string; tenSP: string; giaBan: number; soLuong: number; ngungKinhDoanh: boolean }[];
+        };
+
+        const changes: string[] = [];
+        const next: CartItem[] = [];
+        for (const item of get().items) {
+          const p = products.find((x) => x.maSP === item.productId);
+          if (!p || p.ngungKinhDoanh) {
+            changes.push(`"${item.name}" đã ngừng kinh doanh và được xóa khỏi giỏ`);
+            continue;
+          }
+          if (p.soLuong <= 0) {
+            changes.push(`"${p.tenSP}" đã hết hàng và được xóa khỏi giỏ`);
+            continue;
+          }
+          if (p.giaBan !== item.price) {
+            changes.push(`Giá "${p.tenSP}" đã cập nhật: ${p.giaBan.toLocaleString("vi-VN")}đ`);
+          }
+          const quantity = Math.min(item.quantity, p.soLuong);
+          if (quantity < item.quantity) {
+            changes.push(`"${p.tenSP}" chỉ còn ${p.soLuong} sản phẩm, số lượng đã được điều chỉnh`);
+          }
+          next.push({ ...item, name: p.tenSP, price: p.giaBan, maxStock: p.soLuong, quantity });
+        }
+        set({ items: next });
+        return changes;
       },
 
       getTotalItems: () => {

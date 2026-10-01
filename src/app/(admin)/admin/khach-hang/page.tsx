@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   Users,
   Search,
-  Plus,
   ShoppingBag,
   CreditCard,
   Phone,
@@ -55,7 +54,7 @@ export default function AdminKhachHangPage() {
   const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
   const [searchedKeyword, setSearchedKeyword] = useState("");
 
-  // Form thêm khách
+  // Form sửa khách
   const [newHoTen, setNewHoTen] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -92,15 +91,6 @@ export default function AdminKhachHangPage() {
     fetchCustomers(searchKeyword);
   };
 
-  const openAdd = () => {
-    setEditingCustomer(null);
-    setNewHoTen("");
-    setNewPhone("");
-    setNewEmail("");
-    setNewAddress("");
-    setShowAddModal(true);
-  };
-
   // Bang 3.1: form sua dien san thong tin hien tai
   const openEdit = (c: Customer) => {
     setEditingCustomer(c);
@@ -111,8 +101,9 @@ export default function AdminKhachHangPage() {
     setShowAddModal(true);
   };
 
-  const handleCreateCustomer = async (e: React.FormEvent) => {
+  const handleUpdateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingCustomer) return;
     // A1 bo trong, A2 sai dinh dang (server kiem tra lai)
     const clientError = !newHoTen.trim()
       ? "Vui lòng nhập họ tên khách hàng"
@@ -131,10 +122,10 @@ export default function AdminKhachHangPage() {
     setSubmitting(true);
     try {
       const res = await fetch("/api/admin/khach-hang", {
-        method: editingCustomer ? "PUT" : "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          maKH: editingCustomer?.maKH,
+          maKH: editingCustomer.maKH,
           hoTen: newHoTen.trim(),
           soDienThoai: newPhone.trim(),
           email: newEmail.trim(),
@@ -153,7 +144,7 @@ export default function AdminKhachHangPage() {
         setNewAddress("");
         fetchCustomers();
       } else {
-        toast.error(data.error || "Thêm khách hàng thất bại");
+        toast.error(data.error || "Cập nhật khách hàng thất bại");
       }
     } catch {
       toast.error("Lỗi kết nối máy chủ");
@@ -206,13 +197,6 @@ export default function AdminKhachHangPage() {
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-[#f66315]" : ""}`} />
             Làm mới
-          </button>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e55000] to-[#f66315] px-4 py-2 text-xs font-bold text-white shadow-md shadow-orange-500/20 hover:brightness-110 transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            Thêm khách hàng
           </button>
         </div>
       </div>
@@ -511,18 +495,14 @@ export default function AdminKhachHangPage() {
         </div>
       )}
 
-      {/* Modal Thêm khách hàng mới */}
-      {showAddModal && (
+      {/* Modal Sửa thông tin khách hàng (Bảng 3.1) */}
+      {showAddModal && editingCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                {editingCustomer ? (
-                  <Edit2 className="h-5 w-5 text-[#f66315]" />
-                ) : (
-                  <Plus className="h-5 w-5 text-[#f66315]" />
-                )}
-                {editingCustomer ? "Sửa Thông Tin Khách Hàng" : "Thêm Khách Hàng Mới"}
+                <Edit2 className="h-5 w-5 text-[#f66315]" />
+                Sửa thông tin khách hàng
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -532,7 +512,7 @@ export default function AdminKhachHangPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateCustomer} className="mt-4 space-y-3.5 text-xs">
+            <form onSubmit={handleUpdateCustomer} className="mt-4 space-y-3.5 text-xs">
               <div>
                 <label className="mb-1 block font-bold text-slate-700">
                   Họ và tên khách hàng <span className="text-red-500">*</span>
@@ -581,12 +561,6 @@ export default function AdminKhachHangPage() {
                 />
               </div>
 
-              {!editingCustomer && (
-                <div className="rounded-xl bg-orange-50 p-3 text-[11px] text-orange-800 border border-orange-200/60">
-                  <p>Mật khẩu đăng nhập mặc định cho khách hàng sẽ là: <strong>123456</strong></p>
-                </div>
-              )}
-
               <div className="mt-6 flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
@@ -600,7 +574,7 @@ export default function AdminKhachHangPage() {
                   disabled={submitting}
                   className="rounded-xl bg-[#f66315] px-5 py-2 font-bold text-white shadow-md hover:bg-[#d4520f] disabled:opacity-50"
                 >
-                  {submitting ? "Đang lưu..." : editingCustomer ? "Lưu thay đổi" : "Xác nhận thêm"}
+                  {submitting ? "Đang lưu..." : "Lưu thay đổi"}
                 </button>
               </div>
             </form>

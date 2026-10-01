@@ -117,6 +117,11 @@ model DonHang {
   SdtNguoiNhan        String   @db.VarChar(15)
   DiaChiNhan          String   @db.VarChar(255)
   PhuongThucThanhToan String   @default("COD") @db.VarChar(50)
+  // Trang thai thanh toan tach rieng trang thai xu ly don: Chua thanh toan / Da thanh toan / Cho hoan tien / Da hoan tien
+  TrangThaiThanhToan  String   @default("Chua thanh toan") @db.VarChar(30)
+  NgayThanhToan       DateTime?
+  // Thoi diem khach bam "Toi da chuyen khoan" (cho nhan vien doi soat)
+  NgayBaoChuyenKhoan  DateTime?
   GhiChu              String?  @db.VarChar(500)
   MaKH                String
   KhachHang           KhachHang @relation(fields: [MaKH], references: [MaKH])
@@ -158,8 +163,17 @@ model HoaDonKho {
   MaHDK       String   @id @default(cuid()) @db.VarChar(255)
   NgayLap     DateTime @default(now())
   LoaiPhieu   String   @db.VarChar(30)
+  // Nghiep vu: Nhap mua hang / Xuat tra NCC / Xuat huy / Xuat bao hanh / Xuat noi bo...
+  NghiepVu    String?  @db.VarChar(50)
   LyDo        String?  @db.VarChar(500)
+  // So hoa don GTGT / chung tu goc kem theo (vd hoa don cua NCC)
+  SoChungTu   String?  @db.VarChar(50)
+  // Nguoi giao hang (phieu nhap) / nguoi nhan hang (phieu xuat)
+  NguoiGiaoNhan String? @db.VarChar(100)
+  KhoHang     String?  @db.VarChar(100)
   TongTien    Decimal  @default(0) @db.Decimal(15, 0)
+  // So tien da tra NCC cho phieu nhap; cong no = TongTien - DaThanhToan (phieu chua huy)
+  DaThanhToan Decimal  @default(0) @db.Decimal(15, 0)
   TrangThai   String   @default("Completed") @db.VarChar(50)
   MaNV        String
   NhanVien    NhanVien @relation(fields: [MaNV], references: [MaNV])

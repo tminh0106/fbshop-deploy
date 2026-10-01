@@ -1,20 +1,42 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, ShoppingBag, Package, ArrowRight, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
+import { orderStatusLabel } from "@/lib/orderStatus";
+import { formatCurrency } from "@/lib/utils";
+
+interface OrderInfo {
+  maDH: string;
+  ngayTao: string;
+  trangThai: string;
+  tongTien: number;
+  phuongThucThanhToan: string;
+}
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const maDH = searchParams.get("maDH") || "DH_FB" + Date.now();
+  const maDH = searchParams.get("maDH") || "";
   const clearCart = useCartStore((state) => state.clearCart);
+  const [order, setOrder] = useState<OrderInfo | null>(null);
 
   useEffect(() => {
     // Xoa sach gio hang khi da dat hang thanh cong
     clearCart();
   }, [clearCart]);
+
+  // Thong tin that cua don (thoi gian tao, trang thai, so tien) lay tu may chu
+  useEffect(() => {
+    if (!maDH) return;
+    fetch(`/api/don-hang/${encodeURIComponent(maDH)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data?.order && setOrder(data.order))
+      .catch(() => {});
+  }, [maDH]);
+
+  const waitingPayment = order?.trangThai === "Cho thanh toan";
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -35,22 +57,38 @@ function SuccessContent() {
         <div className="my-8 rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-left space-y-3">
           <div className="flex justify-between items-center text-xs">
             <span className="text-slate-500">Mã đơn hàng:</span>
-            <span className="font-mono font-bold text-slate-900">{maDH}</span>
+            <span className="font-mono font-bold text-slate-900">{maDH || "—"}</span>
           </div>
 
           <div className="flex justify-between items-center text-xs">
             <span className="text-slate-500">Thời gian tạo:</span>
             <span className="font-medium text-slate-700">
-              {new Date().toLocaleString("vi-VN")}
+              {order ? new Date(order.ngayTao).toLocaleString("vi-VN") : "—"}
             </span>
           </div>
 
           <div className="flex justify-between items-center text-xs">
             <span className="text-slate-500">Trạng thái:</span>
             <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">
-              Đang xử lý xác nhận
+              {order ? orderStatusLabel(order.trangThai) : "Chờ xác nhận"}
             </span>
           </div>
+
+          {order && (
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-500">
+                {order.phuongThucThanhToan === "COD" ? "Thanh toán khi nhận hàng:" : "Số tiền chuyển khoản:"}
+              </span>
+              <span className="font-bold text-[#f66315]">{formatCurrency(order.tongTien)}</span>
+            </div>
+          )}
+
+          {waitingPayment && (
+            <p className="rounded-xl bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-800">
+              FBShop sẽ kiểm tra giao dịch và xác nhận đơn ngay khi nhận được tiền. Bạn có thể xem lại mã QR trong
+              mục <strong>Đơn hàng của tôi</strong>.
+            </p>
+          )}
         </div>
 
         {/* Action buttons */}

@@ -168,15 +168,19 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Thiếu mã sản phẩm cần xóa" }, { status: 400 });
     }
 
-    // Kiem tra rang buoc giao dich trong ChiTietDonHang va ChiTietHoaDonKho
-    const donHangCount = await prisma.chiTietDonHang.count({
-      where: { MaSP: maSP },
-    });
-    const hoaDonKhoCount = await prisma.chiTietHoaDonKho.count({
-      where: { MaSP: maSP },
-    });
+    const existing = await prisma.sanPham.findUnique({ where: { MaSP: maSP }, select: { MaSP: true } });
+    if (!existing) {
+      return NextResponse.json({ error: "Sản phẩm không tồn tại hoặc đã bị xóa" }, { status: 404 });
+    }
 
-    if (donHangCount > 0 || hoaDonKhoCount > 0) {
+    // Kiem tra rang buoc giao dich trong ChiTietDonHang, ChiTietHoaDonKho va lo hang trong kho (HangHoaKho)
+    const [donHangCount, hoaDonKhoCount, loHangCount] = await Promise.all([
+      prisma.chiTietDonHang.count({ where: { MaSP: maSP } }),
+      prisma.chiTietHoaDonKho.count({ where: { MaSP: maSP } }),
+      prisma.hangHoaKho.count({ where: { MaSP: maSP } }),
+    ]);
+
+    if (donHangCount > 0 || hoaDonKhoCount > 0 || loHangCount > 0) {
       // Khong duoc xoa cung, cap nhat trang thai ngung kinh doanh vao MoTa
       const sp = await prisma.sanPham.findUnique({ where: { MaSP: maSP } });
       const currentMoTa = sp?.MoTa || "";

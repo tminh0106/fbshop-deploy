@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { createSlug } from "@/lib/utils";
 import type { ProductItem } from "@/lib/types";
+import { cancelExpiredUnpaidOrders } from "@/lib/orderExpiry";
 
 // Map friendly category slugs / aliases to DB MaDanhMuc
 const CATEGORY_MAP: Record<string, string> = {
@@ -16,6 +17,8 @@ const CATEGORY_MAP: Record<string, string> = {
 
 export async function GET(request: Request) {
   try {
+    // Don chuyen khoan qua han -> tra hang ve kho de ton kho hien thi dung
+    await cancelExpiredUnpaidOrders();
     const { searchParams } = new URL(request.url);
 
     const categoryParam = searchParams.get("category");
@@ -33,7 +36,9 @@ export async function GET(request: Request) {
         OR: [
           { MoTa: null },
           {
+            // Trang quan tri danh dau ngung kinh doanh bang "[NGỪNG KINH DOANH]" (giu them ma cu de tuong thich)
             NOT: [
+              { MoTa: { contains: "[NGỪNG KINH DOANH]" } },
               { MoTa: { contains: "NGUNG_KINH_DOANH" } },
               { MoTa: { contains: "Hidden" } },
             ],

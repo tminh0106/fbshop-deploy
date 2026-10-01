@@ -27,6 +27,7 @@ interface NCCItem {
   GhiChu: string | null;
   TrangThai: string;
   _count?: { HoaDonKhos: number };
+  CongNo?: number;
 }
 
 export default function AdminNhaCungCapPage() {
@@ -104,7 +105,8 @@ export default function AdminNhaCungCapPage() {
       maSoThue: ncc.MaSoThue || "",
       nguoiDaiDien: ncc.NguoiDaiDien || "",
       ghiChu: ncc.GhiChu || "",
-      trangThai: ncc.TrangThai,
+      // Du lieu cu co the luu "Dang hop tac": moi gia tri khac "Ngung hop tac" deu la dang hop tac
+      trangThai: ncc.TrangThai === "Ngung hop tac" ? "Ngung hop tac" : "Active",
     });
     setShowModal(true);
   };
@@ -186,6 +188,7 @@ export default function AdminNhaCungCapPage() {
       "Người đại diện": s.NguoiDaiDien || "",
       "Trạng thái": s.TrangThai === "Ngung hop tac" ? "Ngừng hợp tác" : "Đang hợp tác",
       "Hóa đơn kho liên kết": s._count?.HoaDonKhos || 0,
+      "Công nợ (VNĐ)": s.CongNo || 0,
     }));
 
     exportToExcel(dataToExport, "DanhSachNhaCungCap_FBShop", "NhaCungCap");
@@ -261,6 +264,7 @@ export default function AdminNhaCungCapPage() {
                 <th className="px-4 py-3">Mã Số Thuế</th>
                 <th className="px-4 py-3">Đại Diện</th>
                 <th className="px-4 py-3 text-center">HĐ Kho</th>
+                <th className="px-4 py-3 text-right">Công Nợ</th>
                 <th className="px-4 py-3 text-center">Trạng Thái</th>
                 <th className="px-4 py-3 text-right">Thao Tác</th>
               </tr>
@@ -268,13 +272,13 @@ export default function AdminNhaCungCapPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">
                     Đang tải danh sách nhà cung cấp...
                   </td>
                 </tr>
               ) : suppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">
                     {searchedKeyword ? "Không tìm thấy nhà cung cấp phù hợp" : "Chưa có nhà cung cấp nào"}
                   </td>
                 </tr>
@@ -307,6 +311,13 @@ export default function AdminNhaCungCapPage() {
                       </td>
                       <td className="px-4 py-3 text-center font-bold text-slate-700">
                         {s._count?.HoaDonKhos || 0}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {s.CongNo ? (
+                          <span className="font-bold text-red-600">{s.CongNo.toLocaleString("vi-VN")} đ</span>
+                        ) : (
+                          <span className="text-slate-400">0 đ</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span

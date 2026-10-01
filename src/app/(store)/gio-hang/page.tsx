@@ -14,11 +14,15 @@ export default function CartPage() {
   const [mounted, setMounted] = useState(false);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ id: string; name: string } | null>(null);
 
-  const { items, updateQuantity, removeItem, getTotalPrice, getTotalItems } = useCartStore();
+  const { items, updateQuantity, removeItem, getTotalPrice, getTotalItems, syncWithServer } = useCartStore();
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Gio luu o trinh duyet: cap nhat lai gia / ton kho / san pham ngung ban theo CSDL
+    syncWithServer()
+      .then((changes) => changes.forEach((c) => toast(c, { icon: "ℹ️" })))
+      .catch(() => {});
+  }, [syncWithServer]);
 
   if (!mounted) {
     return (

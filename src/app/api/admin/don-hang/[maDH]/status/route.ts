@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { requireFeature } from "@/lib/auth";
-import { ORDER_STATUS, ORDER_TRANSITIONS, orderStatusLabel } from "@/lib/orderStatus";
+import { Prisma } from "@prisma/client";
+import { ORDER_STATUS, ORDER_TRANSITIONS, PAYMENT_STATUS, orderStatusLabel } from "@/lib/orderStatus";
+import { restoreOrderResources } from "@/lib/orderRestore";
 
 // =======================================================
 // CAP NHAT TRANG THAI DON HANG - Bang 3.8 / FR-11
 // Cho xac nhan -> Dang xu ly -> Dang giao -> Da giao; huy duoc truoc khi giao.
-// Huy don -> hoan tra ton kho (FR-13).
+// Huy don -> hoan tra ton kho va luot dung voucher (FR-13).
+// Trang thai thanh toan di kem (Bang 3.48):
+// - Cho thanh toan -> Cho xac nhan = nhan vien da doi soat, xac nhan NHAN DUOC TIEN chuyen khoan
+// - Don COD giao thanh cong (Da giao) = da thu tien
+// - Huy don da thanh toan -> Cho hoan tien
 // =======================================================
 
 // Ten trang thai tieng Anh cu -> ma chuan
@@ -46,26 +52,38 @@ export async function PUT(request: Request, { params }: { params: Promise<{ maDH
       );
     }
 
+    const data: Prisma.DonHangUpdateManyMutationInput = { TrangThai: next };
+    const paid = order.TrangThaiThanhToan === PAYMENT_STATUS.PAID;
+    if (current === ORDER_STATUS.WAITING_PAYMENT && next === ORDER_STATUS.PENDING) {
+      data.TrangThaiThanhToan = PAYMENT_STATUS.PAID;
+      data.NgayThanhToan = new Date();
+    } else if (next === ORDER_STATUS.DONE && !paid) {
+      data.TrangThaiThanhToan = PAYMENT_STATUS.PAID;
+      data.NgayThanhToan = new Date();
+    } else if (next === ORDER_STATUS.CANCELLED && paid) {
+      data.TrangThaiThanhToan = PAYMENT_STATUS.REFUND_PENDING;
+    }
+
     await prisma.$transaction(async (tx) => {
       // Chi cap nhat neu trang thai van la trang thai vua doc (tranh 2 nguoi huy cung luc -> hoan kho 2 lan)
       const changed = await tx.donHang.updateMany({
         where: { MaDH: maDH, TrangThai: order.TrangThai },
-        data: { TrangThai: next },
+        data,
       });
       if (changed.count === 0) throw new ConflictError();
 
-      if (next === ORDER_STATUS.CANCELLED) {
-        for (const item of order.ChiTietDonHangs) {
-          await tx.sanPham.update({ where: { MaSP: item.MaSP }, data: { SoLuong: { increment: item.SoLuong } } });
-        }
-      }
+      if (next === ORDER_STATUS.CANCELLED) await restoreOrderResources(tx, order);
     });
 
     return NextResponse.json({
       success: true,
       message:
         next === ORDER_STATUS.CANCELLED
-          ? "Đã hủy đơn hàng và hoàn trả tồn kho"
+          ? paid
+            ? "Đã hủy đơn hàng, hoàn trả tồn kho. Đơn đã thanh toán nên chuyển sang Chờ hoàn tiền"
+            : "Đã hủy đơn hàng và hoàn trả tồn kho"
+          : current === ORDER_STATUS.WAITING_PAYMENT
+          ? "Đã xác nhận nhận tiền chuyển khoản. Đơn chuyển sang Chờ xác nhận"
           : `Cập nhật trạng thái đơn hàng thành công: ${orderStatusLabel(next)}`,
     });
   } catch (error) {

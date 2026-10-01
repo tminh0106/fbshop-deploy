@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
-import { hashPassword, requireFeature } from "@/lib/auth";
+import { requireFeature } from "@/lib/auth";
 import {
   EMAIL_ERROR,
   EMAIL_REGEX,
@@ -13,11 +13,11 @@ import {
 } from "@/lib/validation";
 
 // =======================================================
-// KHACH HANG - Bang 3.1 (Sua), 3.2 (Xoa), 3.3 (Tim kiem) + Them moi tai quay
+// KHACH HANG - Bang 3.1 (Sua), 3.2 (Xoa), 3.3 (Tim kiem)
+// Khach hang tu dang ky tai khoan (Bang 3.38) nen quan tri khong co chuc nang them moi
 // =======================================================
 
 const ORDER_DONE = "Da giao";
-const DEFAULT_PASSWORD = "123456";
 const DUPLICATE_ERROR = "Thông tin (SĐT/Email) đã tồn tại";
 
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
@@ -114,37 +114,6 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("GET /api/admin/khach-hang error:", error);
     return bad("Lỗi tải danh sách khách hàng", 500);
-  }
-}
-
-// POST: Them khach hang tai quay (mat khau dang nhap mac dinh 123456)
-export async function POST(request: Request) {
-  try {
-    const auth = await requireFeature("khachHang");
-    if (!auth.ok) return auth.response;
-
-    const v = validate(await request.json(), false);
-    if ("error" in v) return bad(v.error!);
-    if (await findDuplicate(v.data)) return bad(DUPLICATE_ERROR, 409);
-
-    const created = await prisma.khachHang.create({
-      data: {
-        ...(v.data as Omit<Prisma.KhachHangCreateInput, "MatKhau">),
-        MatKhau: await hashPassword(DEFAULT_PASSWORD),
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: "Thêm khách hàng thành công",
-      customer: { maKH: created.MaKH, hoTen: created.HoTen, soDienThoai: created.SoDienThoai },
-    });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return bad(DUPLICATE_ERROR, 409);
-    }
-    console.error("POST /api/admin/khach-hang error:", error);
-    return bad("Không thể tạo khách hàng mới", 500);
   }
 }
 
