@@ -103,7 +103,8 @@ export async function POST(request: Request) {
         TenSP: tenSP.trim(),
         GiaBan: Number(giaBan),
         SoLuong: Number(soLuong) || 0,
-        TrongLuong: trongLuong || "4U",
+        // Giay, balo, phu kien khong co trong luong vot -> de trong
+        TrongLuong: typeof trongLuong === "string" && trongLuong.trim() ? trongLuong.trim() : null,
         HinhAnh: image.value,
         MoTa: moTa || "",
         MaDanhMuc: maDanhMuc,
@@ -141,7 +142,7 @@ export async function PUT(request: Request) {
         TenSP: tenSP?.trim(),
         GiaBan: giaBan !== undefined ? Number(giaBan) : undefined,
         SoLuong: soLuong !== undefined ? Number(soLuong) : undefined,
-        TrongLuong: trongLuong,
+        TrongLuong: trongLuong === undefined ? undefined : String(trongLuong).trim() || null,
         HinhAnh: image.value,
         MoTa: moTa,
         MaDanhMuc: maDanhMuc,

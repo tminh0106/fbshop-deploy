@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Banknote, Truck } from "lucide-react";
 import { BrandMark } from "@/components/layout/BrandLogo";
 
-// Chan trang kieu fbshop.vn: nen hong dao, hang lien he chu cam, cot huong dan / ho tro
+// Chan trang kieu fbshop.vn: nen hong dao, hang lien he chu cam, cot ho tro / danh muc / thanh toan
 // Thong tin lien he la cua du an (khong dung thong tin that cua fbshop.vn)
 
 const CONTACTS = [
@@ -12,12 +12,12 @@ const CONTACTS = [
   { label: "Xem cửa hàng", value: "Thanh Xuân, Hà Nội", href: undefined },
 ];
 
-const GUIDE_LINKS = [
-  "Chính sách bảo hành",
-  "Chính sách đổi trả hàng",
-  "Chính sách vận chuyển",
-  "Chính sách thanh toán",
-  "Chính sách bảo mật",
+const CATEGORY_LINKS = [
+  { label: "Vợt cầu lông Yonex", href: "/san-pham?category=DM_YONEX" },
+  { label: "Vợt cầu lông Lining", href: "/san-pham?category=DM_LINING" },
+  { label: "Vợt cầu lông Victor", href: "/san-pham?category=DM_VICTOR" },
+  { label: "Giày cầu lông", href: "/san-pham?category=DM_GIAY" },
+  { label: "Balo & Bao vợt", href: "/san-pham?category=DM_BALO" },
 ];
 
 const SUPPORT_LINKS = [
@@ -70,20 +70,8 @@ export default function StoreFooter() {
             ))}
           </div>
 
-          {/* Cot huong dan / ho tro / thanh toan */}
+          {/* Cot ho tro / danh muc / thanh toan */}
           <div className="grid gap-8 pt-8 sm:grid-cols-3">
-            <div>
-              <h3 className="text-base font-semibold">Hướng dẫn khách hàng</h3>
-              <ul className="mt-4 space-y-3 text-sm text-slate-700">
-                {GUIDE_LINKS.map((label) => (
-                  <li key={label}>
-                    <Link href="#" className="transition-colors hover:text-[#f66315]">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
             <div>
               <h3 className="text-base font-semibold">Hỗ trợ khách hàng</h3>
               <ul className="mt-4 space-y-3 text-sm text-slate-700">
@@ -97,15 +85,27 @@ export default function StoreFooter() {
               </ul>
             </div>
             <div>
+              <h3 className="text-base font-semibold">Danh mục sản phẩm</h3>
+              <ul className="mt-4 space-y-3 text-sm text-slate-700">
+                {CATEGORY_LINKS.map((l) => (
+                  <li key={l.href}>
+                    <Link href={l.href} className="transition-colors hover:text-[#f66315]">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
               <h3 className="text-base font-semibold">Hình thức thanh toán</h3>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm shadow-sm">
-                  <Banknote className="h-4 w-4 text-[#f66315]" />
-                  Chuyển khoản
-                </span>
+              <div className="mt-4 flex flex-col items-start gap-2">
                 <span className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm shadow-sm">
                   <Truck className="h-4 w-4 text-[#f66315]" />
-                  Ship COD
+                  Thanh toán khi nhận hàng (COD)
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm shadow-sm">
+                  <Banknote className="h-4 w-4 text-[#f66315]" />
+                  Chuyển khoản / ví điện tử (VietQR)
                 </span>
               </div>
             </div>

@@ -130,7 +130,7 @@ export default function AdminSanPhamPage() {
       tenSP: p.TenSP,
       giaBan: Number(p.GiaBan),
       soLuong: p.SoLuong,
-      trongLuong: p.TrongLuong || "4U",
+      trongLuong: p.TrongLuong || "",
       hinhAnh: p.HinhAnh || "",
       moTa: p.MoTa || "",
       maDanhMuc: p.MaDanhMuc,
@@ -362,7 +362,7 @@ export default function AdminSanPhamPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center font-mono text-slate-600">
-                        {p.TrongLuong || "4U"}
+                        {p.TrongLuong || "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span
@@ -486,10 +486,10 @@ export default function AdminSanPhamPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block font-bold text-slate-700">Trọng lượng</label>
+                  <label className="mb-1 block font-bold text-slate-700">Trọng lượng (vợt)</label>
                   <input
                     type="text"
-                    placeholder="3U, 4U, 5U..."
+                    placeholder="3U, 4U... (bỏ trống với giày, balo)"
                     value={formData.trongLuong}
                     onChange={(e) =>
                       setFormData({ ...formData, trongLuong: e.target.value })

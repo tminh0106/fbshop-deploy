@@ -7,22 +7,23 @@ import HeroSlider, { type HeroVoucher } from "@/components/HeroSlider";
 import QuickSearchBar from "@/components/QuickSearchBar";
 import StoreLayout from "@/app/(store)/layout";
 import type { ProductItem } from "@/lib/types";
-import { Footprints, Backpack, Wrench, LayoutGrid, ShieldCheck, Truck, RotateCcw } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Truck, RotateCcw } from "lucide-react";
 
 export const revalidate = 0; // Luon lay du lieu moi nhat
 
-// The danh muc (luoi 4x2, nen pastel - theo bo cuc fbshop.vn)
+// The danh muc (luoi 4x2): moi the 1 anh san pham nen trang dai dien + nen mau nhat rieng
 const CATEGORY_TILES = [
-  { name: "Vợt cầu lông Yonex", category: "DM_YONEX" },
-  { name: "Vợt cầu lông Lining", category: "DM_LINING" },
-  { name: "Vợt cầu lông Victor", category: "DM_VICTOR" },
-  { name: "Vợt cầu lông Mizuno", category: "DM_MIZUNO" },
-  { name: "Giày cầu lông", category: "DM_GIAY", icon: Footprints },
-  { name: "Balo & Bao vợt", category: "DM_BALO", icon: Backpack },
-  { name: "Phụ kiện cầu lông", category: "DM_PHUKIEN", icon: Wrench },
-  { name: "Tất cả sản phẩm", category: "", icon: LayoutGrid },
+  { name: "Vợt cầu lông Yonex", category: "DM_YONEX", image: "/products/sp-ax100zz.jpg", tint: "bg-[#fff1e8]", racket: true },
+  { name: "Vợt cầu lông Lining", category: "DM_LINING", image: "/products/sp-tec9.png", tint: "bg-[#fdf5e3]", racket: true },
+  { name: "Vợt cầu lông Victor", category: "DM_VICTOR", image: "/banner/danh-muc-victor.webp", tint: "bg-[#e9f4ff]", racket: true },
+  { name: "Vợt cầu lông Mizuno", category: "DM_MIZUNO", image: "/products/sp-jpx8f.jpg", tint: "bg-[#ecf7ee]", racket: true },
+  { name: "Giày cầu lông", category: "DM_GIAY", image: "/products/sp-p9200chp.webp", tint: "bg-[#f1eefe]", racket: false },
+  { name: "Balo & Bao vợt", category: "DM_BALO", image: "/products/sp-bag926b.webp", tint: "bg-[#fdeef3]", racket: false },
+  { name: "Phụ kiện cầu lông", category: "DM_PHUKIEN", image: "/products/sp-ac102ex.webp", tint: "bg-[#e9f8f4]", racket: false },
+  { name: "Tất cả sản phẩm", category: "", image: "", tint: "", racket: false },
 ];
-const PASTELS = ["bg-[#fdeee8]", "bg-[#fdf8e4]", "bg-[#e9f9ea]", "bg-[#fbf6e9]"];
+// Anh ghep cho the "Tat ca san pham": vot - giay - balo
+const ALL_TILE_IMAGES = ["/products/sp-saga3pro.webp", "/banner/danh-muc-victor.webp", "/products/sp-ba22926t.webp"];
 
 // Cac khu san pham tren trang chu: moi khu 1 the quang cao + luoi toi da 6 san pham
 const SECTIONS = [
@@ -48,8 +49,14 @@ export default async function HomePage() {
         where: { SoLuong: { gt: 0 } },
         orderBy: { TenSP: "asc" },
       }),
+      // Chi quang ba ma dang dung duoc: da den ngay bat dau, chua het han, con luot
       prisma.voucher.findFirst({
-        where: { TrangThai: "Dang hoat dong", NgayKetThuc: { gte: new Date() } },
+        where: {
+          TrangThai: "Dang hoat dong",
+          NgayBatDau: { lte: new Date() },
+          NgayKetThuc: { gte: new Date() },
+          TongSoLuong: { gt: 0 },
+        },
         orderBy: { GiaTriGiam: "desc" },
       }),
     ]);
@@ -83,15 +90,17 @@ export default async function HomePage() {
           voucher.LoaiGiamGia === "PHANTRAM"
             ? `Giảm ${value}%`
             : `Giảm ${value.toLocaleString("vi-VN")}đ`,
+        isPercent: voucher.LoaiGiamGia === "PHANTRAM",
+        value,
+        maxDiscount: Number(voucher.MucGiamToiDa),
         minOrder: Number(voucher.DonHangToiThieu),
+        endDate: voucher.NgayKetThuc.toISOString(),
+        remaining: voucher.TongSoLuong,
       };
     }
   } catch (error) {
     console.error("Loi truy van san pham trang chu:", error);
   }
-
-  const firstImageOf = (category: string) =>
-    products.find((p) => (category ? p.categoryId === category : true))?.imageUrl;
 
   const sections = SECTIONS.map((s) => ({
     ...s,
@@ -100,7 +109,7 @@ export default async function HomePage() {
 
   return (
     <StoreLayout>
-      <HeroSlider images={products.map((p) => p.imageUrl)} voucher={activeVoucher} />
+      <HeroSlider voucher={activeVoucher} />
 
       <div className="relative bg-page">
         {/* Soc trang tri 2 ben */}
@@ -117,35 +126,82 @@ export default async function HomePage() {
 
         {/* ===== DANH MUC SAN PHAM ===== */}
         <section className="container pt-10 lg:pt-14">
-          <h2 className="text-center text-3xl font-bold text-navy lg:text-[40px]">Danh mục sản phẩm</h2>
-          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
-            {CATEGORY_TILES.map((tile, i) => {
-              const img = firstImageOf(tile.category);
-              const Icon = tile.icon;
+          <div className="flex flex-col items-center text-center">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#f66315]">Mua sắm theo nhu cầu</span>
+            <h2 className="mt-2 text-3xl font-bold text-navy lg:text-[40px]">Danh mục sản phẩm</h2>
+          </div>
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:gap-6">
+            {CATEGORY_TILES.map((tile) => {
+              const count = tile.category ? products.filter((p) => p.categoryId === tile.category).length : products.length;
+              const href = tile.category ? `/san-pham?category=${tile.category}` : "/san-pham";
+
+              // The "Tat ca san pham": nen navy + ghep 3 anh
+              if (!tile.category) {
+                return (
+                  <Link
+                    key={tile.name}
+                    href={href}
+                    className="group relative flex flex-col overflow-hidden rounded-2xl bg-navy shadow-sm ring-1 ring-navy transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_-14px_rgba(3,18,48,0.55)]"
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden">
+                      <div className="bg-grid-dark absolute inset-0 opacity-60" />
+                      <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#f66315]/30 blur-2xl" />
+                      <div className="absolute inset-0 flex items-center justify-center gap-2 px-4">
+                        {ALL_TILE_IMAGES.map((src, i) => (
+                          <div
+                            key={src}
+                            className={`relative aspect-square w-[30%] overflow-hidden rounded-xl bg-white shadow-lg ring-2 ring-white/20 transition-transform duration-500 ${
+                              i === 1 ? "-translate-y-3 group-hover:-translate-y-5" : "translate-y-2 group-hover:translate-y-0"
+                            }`}
+                          >
+                            <Image src={src} alt="" fill sizes="120px" className="object-contain p-1" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-bold text-white sm:text-base">{tile.name}</p>
+                        <p className="text-xs text-white/60">{count} sản phẩm</p>
+                      </div>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f66315] text-white transition-transform group-hover:rotate-45">
+                        <ArrowUpRight className="h-4 w-4" />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              }
+
               return (
                 <Link
                   key={tile.name}
-                  href={tile.category ? `/san-pham?category=${tile.category}` : "/san-pham"}
-                  className="group relative block pt-16"
+                  href={href}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_-16px_rgba(3,18,48,0.25)] hover:ring-[#f66315]/40"
                 >
-                  <div className={`${PASTELS[i % PASTELS.length]} rounded-lg px-3 pb-5 pt-16 text-center transition-shadow group-hover:shadow-[0_10px_30px_rgba(3,18,48,0.10)]`}>
-                    <p className="text-base font-semibold text-navy transition-colors group-hover:text-[#f66315] lg:text-[22px]">
-                      {tile.name}
-                    </p>
+                  <div className={`relative aspect-[4/3] overflow-hidden ${tile.tint}`}>
+                    <div className="absolute left-1/2 top-1/2 h-[78%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70" />
+                    <Image
+                      src={tile.image}
+                      alt={tile.name}
+                      fill
+                      sizes="(min-width: 768px) 25vw, 50vw"
+                      className={`object-contain mix-blend-multiply transition-transform duration-500 ${
+                        tile.racket
+                          ? "-rotate-[32deg] scale-[1.1] group-hover:-rotate-[26deg] group-hover:scale-[1.16]"
+                          : "scale-[1.08] p-3 group-hover:scale-[1.16]"
+                      }`}
+                    />
                   </div>
-                  {/* Anh vuong noi len tren the */}
-                  <div className="absolute left-1/2 top-0 h-28 w-28 -translate-x-1/2 overflow-hidden bg-white shadow-sm transition-transform group-hover:-translate-y-1 lg:h-32 lg:w-32">
-                    {img && !Icon ? (
-                      <Image src={img} alt={tile.name} fill sizes="128px" className="object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#fff4ed] to-white">
-                        {Icon ? (
-                          <Icon className="h-12 w-12 text-[#f66315]" strokeWidth={1.4} />
-                        ) : (
-                          <span className="text-4xl">🏸</span>
-                        )}
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between gap-2 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-navy transition-colors group-hover:text-[#f66315] sm:text-base">
+                        {tile.name}
+                      </p>
+                      <p className="text-xs text-slate-500">{count} sản phẩm</p>
+                    </div>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#f66315] transition-all group-hover:rotate-45 group-hover:bg-[#f66315] group-hover:text-white">
+                      <ArrowUpRight className="h-4 w-4" />
+                    </span>
                   </div>
                 </Link>
               );
