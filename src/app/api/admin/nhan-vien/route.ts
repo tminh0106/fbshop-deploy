@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
 import { ROLES } from "@/lib/permissions";
 import { hashPassword, requireFeature } from "@/lib/auth";
+import { checkKeyword } from "@/lib/validation";
 
 // Regex chuan theo dac ta
 const PHONE_REGEX = /^0\d{9}$/;
@@ -57,6 +58,9 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const keyword = searchParams.get("keyword")?.trim();
+    // Bang 3.33 A2 - tu khoa chua ky tu dac biet / qua dai
+    const keywordError = checkKeyword(keyword);
+    if (keywordError) return bad(keywordError);
 
     const where: Prisma.NhanVienWhereInput = {};
     if (keyword) {

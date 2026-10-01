@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đặc tả Quản lý nhân viên (bản sửa)</title>
+<style>
+  :root { --ink:#111; --line:#444; --muted:#555; --head:#f2f2f2; --note:#fff7e6; --bg:#fff; }
+  body { background:var(--bg); color:var(--ink); font-family:"Times New Roman", Times, serif; font-size:13pt; line-height:1.5; max-width:900px; margin:0 auto; padding:24px 16px 60px; }
+  h1 { font-size:18pt; text-align:center; margin:0 0 4px; }
+  h2 { font-size:14pt; margin:32px 0 8px; }
+  h3 { font-size:13pt; margin:22px 0 6px; font-style:italic; text-align:center; font-weight:normal; }
+  p.sub { text-align:center; color:var(--muted); margin:0 0 24px; }
+  table { width:100%; border-collapse:collapse; margin:6px 0 14px; }
+  th, td { border:1px solid var(--line); padding:6px 8px; vertical-align:top; text-align:left; }
+  th { background:var(--head); }
+  td.k { width:24%; font-weight:bold; }
+  ol, ul { margin:0; padding-left:20px; }
+  li { margin:2px 0; }
+  .note { background:var(--note); border:1px solid #e0c48a; padding:10px 12px; margin:10px 0; }
+</style>
+</head>
+<body>
+
+<h1>ĐẶC TẢ CHỨC NĂNG QUẢN LÝ NHÂN VIÊN (BẢN SỬA)</h1>
+<p class="sub">Thay thế mục 3.2.2.2.8 (Bảng 3.30 – 3.33), nhóm I bảng yêu cầu chức năng và bảng NhanVien trong thiết kế CSDL</p>
+
+<div class="note">
+  <b>Chỗ thay vào tài liệu Google Docs</b> (bôi đen bảng trên trang này → Ctrl+C → dán đè bảng cũ):
+  <ul>
+    <li>Mục 2 → nhóm <i>I. Nhóm chức năng Quản lý nhân viên</i> (FR-26 – FR-29) trong bảng yêu cầu chức năng.</li>
+    <li>Mục 3 → Bảng 3.30, 3.31, 3.32, 3.33 trong <i>3.2.2.2.8. Chức năng Quản lý nhân viên</i>. Bảng 3.33 đổi tên thành “Xem và tìm kiếm nhân viên”.</li>
+    <li>Mục 4 → thay nguyên “2. Bảng Nhân Viên (NhanVien)” trong phần thiết kế CSDL.</li>
+    <li>Mục 1 dùng để giải thích với giảng viên, không bắt buộc đưa vào báo cáo.</li>
+  </ul>
+</div>
+
+<h2>1. Các điểm chưa khớp trong đặc tả cũ</h2>
+<table>
+  <tr><th style="width:4%">#</th><th style="width:32%">Đặc tả cũ</th><th style="width:30%">Vấn đề</th><th>Cách sửa</th></tr>
+  <tr><td>1</td><td>Bảng 3.30 ghi “khởi tạo tài khoản đăng nhập” nhưng luồng chính không mô tả bước nào tạo tài khoản.</td><td>Không rõ tài khoản được tạo khi nào, tên đăng nhập là gì, mật khẩu và vai trò ra sao.</td><td>Nêu rõ: nhập Email thì hệ thống cấp tài khoản (tên đăng nhập = email, mật khẩu mặc định 123456, vai trò Bán hàng); phân quyền khác thực hiện tại Quản lý tài khoản.</td></tr>
+  <tr><td>2</td><td>Không đề cập mã nhân viên.</td><td>Mã nhập tay dễ trùng, sai quy cách.</td><td>Mã nhân viên do hệ thống tự sinh tăng dần (NV001, NV002…), chỉ hiển thị, không cho sửa.</td></tr>
+  <tr><td>3</td><td>Không kiểm tra Lương cơ bản, Phụ cấp.</td><td>Có thể nhập số âm, số thập phân hoặc chữ.</td><td>Bổ sung luồng ngoại lệ: lương, phụ cấp phải là số nguyên VNĐ ≥ 0.</td></tr>
+  <tr><td>4</td><td>Bảng 3.31 thiếu kiểm tra trùng SĐT/Email và thiếu thao tác chuyển trạng thái làm việc.</td><td>Sửa có thể tạo trùng dữ liệu; không có cách đưa nhân viên nghỉ việc ngoài thao tác xóa.</td><td>Bổ sung A3 trùng dữ liệu; cho phép đổi trạng thái Đang làm việc / Đã nghỉ việc (nghỉ việc → khóa tài khoản); không được tự chuyển chính mình sang nghỉ việc.</td></tr>
+  <tr><td>5</td><td>Bảng 3.32 kiểm tra “lịch sử tạo đơn hàng”.</td><td>Đơn hàng trong CSDL không lưu nhân viên xử lý; chỉ hóa đơn kho lưu người lập phiếu.</td><td>Ràng buộc xóa dựa trên hóa đơn kho (phiếu nhập/xuất) mà nhân viên đã lập.</td></tr>
+  <tr><td>6</td><td>Bảng 3.32 A1 vừa là “thông báo lỗi” vừa “cập nhật trạng thái”.</td><td>Mâu thuẫn: thao tác vẫn thành công (chuyển nghỉ việc) nhưng lại được mô tả như lỗi.</td><td>Tách rõ: có lịch sử → chuyển “Đã nghỉ việc” và khóa tài khoản (thành công); đã nghỉ việc + có lịch sử → không xóa được; không có lịch sử → xóa hẳn cùng tài khoản.</td></tr>
+  <tr><td>7</td><td>Không chặn xóa chính mình.</td><td>Quản lý có thể xóa nhân viên gắn với tài khoản đang đăng nhập, mất quyền truy cập.</td><td>Bổ sung luồng ngoại lệ chặn xóa / chặn cho nghỉ việc chính mình.</td></tr>
+  <tr><td>8</td><td>Bảng 3.33 chỉ có xem danh sách, không có tìm kiếm; FR-29 lại yêu cầu “tra cứu” và “vai trò phụ trách”.</td><td>Đặc tả không khớp yêu cầu chức năng.</td><td>Đổi thành “Xem và tìm kiếm nhân viên”: tìm theo mã, họ tên, SĐT, email; hiển thị tài khoản và vai trò liên kết; bổ sung thông báo khi không tìm thấy và khi từ khóa không hợp lệ.</td></tr>
+  <tr><td>9</td><td>Bảng NhanVien: trạng thái “Đang làm, Tạm nghỉ, Đã nghỉ…”.</td><td>Hệ thống chỉ có 2 trạng thái; không có “Tạm nghỉ”.</td><td>Ghi đúng 2 trạng thái: Đang làm việc, Đã nghỉ việc.</td></tr>
+</table>
+
+<h2>2. Sửa bảng yêu cầu chức năng (nhóm I)</h2>
+<table>
+  <tr><th style="width:10%">Mã YC</th><th style="width:20%">Tên yêu cầu</th><th>Mô tả chi tiết (bản sửa)</th></tr>
+  <tr><td>FR-26</td><td>Thêm mới nhân viên</td><td>Người quản lý thêm hồ sơ nhân viên (Họ tên, SĐT, Email, Địa chỉ, Lương cơ bản, Phụ cấp); mã nhân viên do hệ thống tự sinh. Nếu nhập Email, hệ thống cấp tài khoản đăng nhập cho nhân viên (tên đăng nhập là email, mật khẩu mặc định, vai trò Bán hàng). Chặn trùng SĐT và Email.</td></tr>
+  <tr><td>FR-27</td><td>Sửa thông tin nhân viên</td><td>Cập nhật họ tên, thông tin liên hệ, email đăng nhập, lương cơ bản, phụ cấp và trạng thái làm việc của nhân viên; kiểm tra định dạng và chặn trùng SĐT/Email.</td></tr>
+  <tr><td>FR-28</td><td>Ngừng hoạt động nhân sự</td><td>Chuyển trạng thái nhân viên sang “Đã nghỉ việc” và khóa tài khoản đăng nhập thay vì xóa cứng dữ liệu nếu nhân viên đã từng lập hóa đơn kho. Nhân viên chưa phát sinh dữ liệu được xóa hẳn cùng tài khoản.</td></tr>
+  <tr><td>FR-29</td><td>Danh sách nhân sự</td><td>Tra cứu theo mã, họ tên, SĐT, email; hiển thị toàn bộ hồ sơ nhân viên kèm tài khoản, vai trò liên kết và trạng thái làm việc; phân trang và xuất Excel.</td></tr>
+</table>
+
+<h2>3. Bảng đặc tả use case</h2>
+
+<h3>Bảng 3.30: Bảng đặc tả chức năng Thêm nhân viên mới</h3>
+<table>
+  <tr><th style="width:24%">Thành phần</th><th>Mô tả chi tiết</th></tr>
+  <tr><td class="k">Tên Use Case</td><td>Thêm nhân viên mới</td></tr>
+  <tr><td class="k">Tác nhân (Actor)</td><td>Người quản lý (vai trò Admin)</td></tr>
+  <tr><td class="k">Mục đích</td><td>Thêm hồ sơ nhân viên mới và cấp tài khoản đăng nhập hệ thống cho nhân viên (khi có email).</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Người quản lý đã đăng nhập bằng tài khoản có quyền quản lý nhân viên.</td></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Hồ sơ nhân viên mới được lưu với trạng thái “Đang làm việc”; nếu có email, tài khoản đăng nhập liên kết được tạo; danh sách nhân viên được làm mới.</td></tr>
+  <tr><td class="k">Luồng sự kiện chính</td><td><ol>
+    <li>Người quản lý chọn chức năng “Quản lý nhân viên” từ menu.</li>
+    <li>Hệ thống hiển thị danh sách nhân viên.</li>
+    <li>Người quản lý chọn “Thêm nhân viên mới”.</li>
+    <li>Hệ thống hiển thị biểu mẫu với mã nhân viên tự sinh (ví dụ NV005, chỉ đọc) và các trường: Họ tên*, Số điện thoại*, Email, Địa chỉ, Lương cơ bản*, Phụ cấp.</li>
+    <li>Người quản lý nhập thông tin và nhấn “Lưu”.</li>
+    <li>Hệ thống kiểm tra dữ liệu: trường bắt buộc, định dạng SĐT/Email, giá trị lương/phụ cấp, trùng SĐT/Email.</li>
+    <li>Hệ thống lưu hồ sơ nhân viên. Nếu có Email, hệ thống tạo tài khoản đăng nhập (tên đăng nhập là email, mật khẩu mặc định 123456, vai trò Bán hàng) trong cùng một giao dịch.</li>
+    <li>Hệ thống thông báo “Thêm nhân viên mới thành công” (kèm thông tin tài khoản đã cấp nếu có) và làm mới danh sách.</li>
+  </ol></td></tr>
+  <tr><td class="k">Luồng ngoại lệ</td><td>
+    A1 – Bỏ trống thông tin bắt buộc: Tại bước 6, nếu thiếu Họ tên hoặc Số điện thoại, hệ thống báo “Vui lòng nhập họ và tên nhân viên” / “Vui lòng nhập số điện thoại” và đánh dấu đỏ trường bị thiếu.<br>
+    A2 – Sai định dạng: Tại bước 6, nếu SĐT không gồm đúng 10 chữ số bắt đầu bằng 0 hoặc Email sai cấu trúc, hệ thống báo lỗi định dạng và yêu cầu nhập lại.<br>
+    A3 – Lương, phụ cấp không hợp lệ: Tại bước 6, nếu Lương cơ bản/Phụ cấp âm, có phần thập phân hoặc không phải số, hệ thống báo lỗi (ví dụ “Lương cơ bản không được âm”).<br>
+    A4 – Trùng dữ liệu: Tại bước 6, nếu SĐT đã thuộc nhân viên khác hoặc Email đã là tên đăng nhập của tài khoản khác, hệ thống báo “Thông tin đã tồn tại” và không lưu.<br>
+    A5 – Hủy thao tác: Người quản lý nhấn “Hủy”, hệ thống đóng biểu mẫu và giữ nguyên danh sách.
+  </td></tr>
+</table>
+
+<h3>Bảng 3.31: Bảng đặc tả chức năng Sửa thông tin nhân viên</h3>
+<table>
+  <tr><th style="width:24%">Thành phần</th><th>Mô tả chi tiết</th></tr>
+  <tr><td class="k">Tên Use Case</td><td>Sửa thông tin nhân viên</td></tr>
+  <tr><td class="k">Tác nhân (Actor)</td><td>Người quản lý (vai trò Admin)</td></tr>
+  <tr><td class="k">Mục đích</td><td>Cập nhật thông tin cá nhân, email đăng nhập, mức lương, phụ cấp và trạng thái làm việc của nhân viên.</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Người quản lý đã đăng nhập; nhân viên cần sửa đã tồn tại trong CSDL.</td></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Thông tin mới được lưu; nếu nhân viên chuyển sang “Đã nghỉ việc” thì tài khoản đăng nhập liên kết bị khóa; danh sách được làm mới.</td></tr>
+  <tr><td class="k">Luồng sự kiện chính</td><td><ol>
+    <li>Người quản lý chọn chức năng “Quản lý nhân viên”, hệ thống hiển thị danh sách.</li>
+    <li>Người quản lý tìm và chọn “Sửa” tại nhân viên cần cập nhật.</li>
+    <li>Hệ thống hiển thị biểu mẫu điền sẵn thông tin hiện tại (mã nhân viên chỉ đọc), có thêm trường Trạng thái làm việc (Đang làm việc / Đã nghỉ việc).</li>
+    <li>Người quản lý sửa các thông tin cần thiết và nhấn “Lưu”.</li>
+    <li>Hệ thống kiểm tra dữ liệu như khi thêm mới (bắt buộc, định dạng, lương/phụ cấp, trùng SĐT/Email với nhân viên khác).</li>
+    <li>Hệ thống lưu thông tin:
+      <ul>
+        <li>Đổi Email: cập nhật tên đăng nhập của tài khoản liên kết; nếu nhân viên chưa có tài khoản thì cấp tài khoản mới (mật khẩu mặc định, vai trò Bán hàng).</li>
+        <li>Chuyển sang “Đã nghỉ việc”: khóa toàn bộ tài khoản đăng nhập của nhân viên.</li>
+      </ul></li>
+    <li>Hệ thống thông báo “Cập nhật thông tin thành công” (kèm ghi chú về tài khoản nếu có thay đổi) và làm mới danh sách.</li>
+  </ol></td></tr>
+  <tr><td class="k">Luồng ngoại lệ</td><td>
+    A1 – Bỏ trống / sai định dạng: Tại bước 5, nếu Họ tên hoặc SĐT bị xóa trắng, SĐT/Email sai định dạng, hoặc lương/phụ cấp không hợp lệ, hệ thống báo lỗi tương ứng và yêu cầu nhập lại.<br>
+    A2 – Trùng dữ liệu: Tại bước 5, nếu SĐT/Email trùng với nhân viên hoặc tài khoản khác, hệ thống báo “Thông tin đã tồn tại”.<br>
+    A3 – Tự cho nghỉ việc chính mình: Tại bước 5, nếu nhân viên đang sửa gắn với tài khoản đang đăng nhập và được chuyển sang “Đã nghỉ việc”, hệ thống từ chối với thông báo “Không thể tự chuyển chính mình sang Đã nghỉ việc”.<br>
+    A4 – Đi làm lại: Nếu chuyển nhân viên từ “Đã nghỉ việc” về “Đang làm việc”, tài khoản vẫn giữ trạng thái khóa; hệ thống nhắc người quản lý mở khóa tại chức năng Quản lý tài khoản.<br>
+    A5 – Hủy thao tác: Người quản lý nhấn “Hủy”, hệ thống đóng biểu mẫu và giữ nguyên dữ liệu cũ.
+  </td></tr>
+</table>
+
+<h3>Bảng 3.32: Bảng đặc tả chức năng Xóa nhân viên</h3>
+<table>
+  <tr><th style="width:24%">Thành phần</th><th>Mô tả chi tiết</th></tr>
+  <tr><td class="k">Tên Use Case</td><td>Xóa nhân viên</td></tr>
+  <tr><td class="k">Tác nhân (Actor)</td><td>Người quản lý (vai trò Admin)</td></tr>
+  <tr><td class="k">Mô tả</td><td>Loại bỏ nhân viên khỏi hệ thống. Nhân viên đã phát sinh dữ liệu nghiệp vụ không bị xóa cứng mà chuyển sang “Đã nghỉ việc” để bảo toàn lịch sử.</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Người quản lý đã đăng nhập; nhân viên cần xóa đã tồn tại trong CSDL.</td></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Nhân viên chưa có dữ liệu liên quan: hồ sơ và tài khoản liên kết bị xóa khỏi CSDL. Nhân viên đã lập hóa đơn kho: chuyển “Đã nghỉ việc” và khóa tài khoản. Danh sách được làm mới.</td></tr>
+  <tr><td class="k">Luồng sự kiện chính</td><td><ol>
+    <li>Người quản lý chọn chức năng “Quản lý nhân viên”, hệ thống hiển thị danh sách.</li>
+    <li>Người quản lý tìm và chọn “Xóa” tại nhân viên cần xóa.</li>
+    <li>Hệ thống hiển thị hộp thoại xác nhận: “Bạn có chắc chắn muốn xóa nhân viên [Họ tên] không?”.</li>
+    <li>Người quản lý chọn “Đồng ý”.</li>
+    <li>Hệ thống kiểm tra ràng buộc: nhân viên có phải là người đang đăng nhập không, nhân viên đã lập hóa đơn kho (phiếu nhập/xuất) nào chưa.</li>
+    <li>Nhân viên chưa lập hóa đơn kho nào: hệ thống xóa hồ sơ nhân viên cùng tài khoản liên kết trong một giao dịch và thông báo “Xóa nhân viên thành công”.</li>
+    <li>Hệ thống làm mới danh sách.</li>
+  </ol></td></tr>
+  <tr><td class="k">Luồng ngoại lệ</td><td>
+    A1 – Đã phát sinh lịch sử làm việc: Tại bước 5, nếu nhân viên đã lập hóa đơn kho, hệ thống không xóa mà chuyển trạng thái sang “Đã nghỉ việc”, khóa tài khoản đăng nhập và thông báo: “Không thể xóa nhân viên đã phát sinh lịch sử làm việc. Hệ thống đã chuyển trạng thái nhân viên sang Đã nghỉ việc và khóa tài khoản.”<br>
+    A2 – Đã nghỉ việc và có lịch sử: Tại bước 5, nếu nhân viên đã ở trạng thái “Đã nghỉ việc” và có hóa đơn kho, hệ thống báo “Nhân viên đã nghỉ việc và có lịch sử làm việc nên không thể xóa khỏi hệ thống.”<br>
+    A3 – Xóa chính mình: Tại bước 5, nếu nhân viên gắn với tài khoản đang đăng nhập, hệ thống báo “Không thể xóa nhân viên gắn với tài khoản đang đăng nhập”.<br>
+    A4 – Hủy thao tác: Tại bước 4, người quản lý chọn “Hủy” hoặc đóng hộp thoại, hệ thống giữ nguyên dữ liệu.
+  </td></tr>
+</table>
+
+<h3>Bảng 3.33: Bảng đặc tả chức năng Xem và tìm kiếm nhân viên</h3>
+<table>
+  <tr><th style="width:24%">Thành phần</th><th>Mô tả chi tiết</th></tr>
+  <tr><td class="k">Tên Use Case</td><td>Xem và tìm kiếm nhân viên</td></tr>
+  <tr><td class="k">Tác nhân (Actor)</td><td>Người quản lý (vai trò Admin)</td></tr>
+  <tr><td class="k">Mô tả</td><td>Xem danh sách hồ sơ nhân viên kèm tài khoản, vai trò liên kết và tra cứu nhanh theo từ khóa.</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Người quản lý đã đăng nhập bằng tài khoản có quyền quản lý nhân viên.</td></tr>
+  <tr><td class="k">Hậu điều kiện</td><td>Hệ thống hiển thị danh sách nhân viên phù hợp; dữ liệu trong CSDL không thay đổi.</td></tr>
+  <tr><td class="k">Luồng sự kiện chính</td><td><ol>
+    <li>Người quản lý chọn chức năng “Quản lý nhân viên”.</li>
+    <li>Hệ thống hiển thị danh sách nhân viên (10 nhân viên mỗi trang) gồm: Mã NV, Họ tên, Số điện thoại, Email, Lương cơ bản, Phụ cấp, Tài khoản liên kết (tên đăng nhập, vai trò, trạng thái tài khoản), Trạng thái làm việc.</li>
+    <li>Người quản lý nhập từ khóa (mã nhân viên, họ tên, số điện thoại hoặc email) và nhấn “Tìm kiếm”.</li>
+    <li>Hệ thống kiểm tra từ khóa và hiển thị danh sách nhân viên phù hợp, quay về trang đầu.</li>
+    <li>Người quản lý có thể chuyển trang hoặc chọn “Xuất Excel” để tải danh sách đang hiển thị.</li>
+  </ol></td></tr>
+  <tr><td class="k">Luồng ngoại lệ</td><td>
+    A1 – Danh sách trống: Tại bước 2, nếu chưa có nhân viên nào, hệ thống hiển thị “Hiện chưa có nhân viên nào trong danh sách”.<br>
+    A2 – Từ khóa không hợp lệ: Tại bước 4, nếu từ khóa chứa ký tự đặc biệt (&lt; &gt; { } ; ' " …) hoặc dài quá 100 ký tự, hệ thống báo “Từ khóa tìm kiếm không hợp lệ”.<br>
+    A3 – Không tìm thấy: Tại bước 4, nếu không có nhân viên phù hợp, hệ thống hiển thị “Không tìm thấy nhân viên phù hợp với "[từ khóa]"”.
+  </td></tr>
+</table>
+
+<h2>4. Thiết kế CSDL – 2. Bảng Nhân Viên (NhanVien) (thay toàn bộ bảng cũ)</h2>
+<table>
+  <tr><th>Tên thuộc tính</th><th>Kiểu dữ liệu</th><th>Khóa</th><th>Bắt buộc</th><th>Ghi chú / Ràng buộc</th></tr>
+  <tr><td>MaNV</td><td>VARCHAR(20)</td><td>PK</td><td>Not Null</td><td>Mã nhân viên, hệ thống tự sinh tăng dần (NV001, NV002…)</td></tr>
+  <tr><td>HoTen</td><td>NVARCHAR(100)</td><td></td><td>Not Null</td><td>Họ và tên nhân viên</td></tr>
+  <tr><td>SoDienThoai</td><td>VARCHAR(15)</td><td></td><td>Not Null</td><td>Đúng 10 chữ số, bắt đầu bằng 0; không trùng giữa các nhân viên</td></tr>
+  <tr><td>DiaChi</td><td>NVARCHAR(255)</td><td></td><td>Null</td><td>Địa chỉ thường trú</td></tr>
+  <tr><td>LuongCoBan</td><td>DECIMAL(15,0)</td><td></td><td>Not Null</td><td>Mức lương cơ bản (VNĐ, số nguyên ≥ 0)</td></tr>
+  <tr><td>PhuCap</td><td>DECIMAL(15,0)</td><td></td><td>Not Null</td><td>Phụ cấp (VNĐ, số nguyên ≥ 0), mặc định 0</td></tr>
+  <tr><td>TrangThai</td><td>NVARCHAR(50)</td><td></td><td>Not Null</td><td>Đang làm việc (mặc định) / Đã nghỉ việc. Đã nghỉ việc thì mọi tài khoản liên kết bị khóa</td></tr>
+</table>
+<p>Email của nhân viên không lưu trong bảng NhanVien mà là tên đăng nhập (TenDangNhap) của bảng TaiKhoan, liên kết qua khóa ngoại TaiKhoan.MaNV → NhanVien.MaNV. Vai trò (Admin, Nhân viên kho, Bán hàng) cũng nằm ở bảng TaiKhoan và được điều chỉnh tại chức năng Quản lý tài khoản.</p>
+
+</body>
+</html>

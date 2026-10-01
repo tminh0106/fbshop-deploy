@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { COOKIE_SECURE } from "@/lib/cookie";
 import prisma from "@/lib/db";
 import { verifyPassword, generateAdminToken } from "@/lib/auth";
 import { isStaffRole, normalizeRole } from "@/lib/permissions";
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
 
     response.cookies.set("fbshop_admin_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: COOKIE_SECURE,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60,
       path: "/",

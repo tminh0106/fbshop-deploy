@@ -85,6 +85,8 @@ export default function AdminNhanVienPage() {
         setSearchedKeyword(keyword.trim());
         // Ma NV tiep theo do server tinh tren toan bo nhan vien (khong phu thuoc bo loc tim kiem)
         if (json.nextMaNV) setNextMaNV(json.nextMaNV);
+      } else {
+        toast.error(json.error || "Lỗi khi tải danh sách nhân viên");
       }
     } catch {
       toast.error("Lỗi khi tải danh sách nhân viên");
