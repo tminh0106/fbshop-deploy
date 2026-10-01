@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
   return (
     <div className="fixed inset-0 z-50 grid overflow-y-auto bg-white lg:grid-cols-2">
       {/* Cot trai: gioi thieu he thong */}
-      <div className="relative hidden overflow-hidden bg-ink p-12 text-white lg:flex lg:flex-col lg:justify-between">
+      <div className="relative hidden overflow-hidden bg-ink p-12 text-white lg:flex lg:flex-col">
         <div className="bg-grid-dark absolute inset-0 [mask-image:radial-gradient(ellipse_at_top_left,black_20%,transparent_70%)]" />
         <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[#f66315]/25 blur-[120px]" />
 
@@ -80,7 +80,8 @@ export default function AdminLoginPage() {
           </span>
         </div>
 
-        <div className="relative max-w-md">
+        {/* Noi dung gioi thieu can giua theo chieu doc */}
+        <div className="relative my-auto max-w-md pb-10">
           <h2 className="text-4xl font-bold leading-tight">
             Vận hành cửa hàng
             <br />
