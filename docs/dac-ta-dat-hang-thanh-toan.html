@@ -28,6 +28,18 @@
 <h1>ĐẶC TẢ CHỨC NĂNG ĐẶT HÀNG – THANH TOÁN (BẢN SỬA)</h1>
 <p class="sub">Thay thế các mục tương ứng trong chương 3 – Hệ thống FBShop</p>
 
+<div class="note">
+  <b>Chỗ thay vào tài liệu Google Docs</b> (bôi đen bảng trên trang này → Ctrl+C → dán đè bảng cũ trong Docs):
+  <ul>
+    <li>Mục 2 → bảng yêu cầu chức năng: dòng FR-08, FR-09 (nhóm B) và FR-11, FR-13 (nhóm D).</li>
+    <li>Bảng 3.8, 3.9 → mục <i>3.2.2.2.3. Chức năng Quản lý đơn hàng</i>.</li>
+    <li>Bảng 3.47, 3.48 → mục <i>3.2.2.2.14. Chức năng Đặt hàng</i>; <b>chèn mới</b> Bảng 3.49 ngay sau Bảng 3.48, trước mục 3.2.2.2.15.</li>
+    <li>Mục 4 → thay nguyên “8. Bảng Đơn Hàng (DonHang)” trong phần thiết kế CSDL.</li>
+    <li>Mục 6 → vẽ lại hình ở <i>3.2.3.12.2. Biểu đồ hoạt động thanh toán</i>; mục 7 → <i>3.2.4.11.13 Biểu đồ tuần tự Thanh toán</i>.</li>
+    <li>Mục 1 và mục 5 dùng để giải thích với giảng viên, không cần đưa vào báo cáo (hoặc đưa vào phần phân tích nếu muốn).</li>
+  </ul>
+</div>
+
 <h2>1. Các điểm sai logic trong đặc tả cũ</h2>
 <table>
   <tr><th style="width:4%">#</th><th style="width:32%">Đặc tả cũ (Bảng 3.48)</th><th style="width:30%">Vì sao sai</th><th>Cách sửa</th></tr>
@@ -175,12 +187,23 @@
   </td></tr>
 </table>
 
-<h2>4. Bổ sung thiết kế CSDL – bảng DonHang</h2>
+<h2>4. Thiết kế CSDL – 8. Bảng Đơn Hàng (DonHang) (thay toàn bộ bảng cũ)</h2>
 <table>
-  <tr><th style="width:26%">Thuộc tính</th><th style="width:20%">Kiểu dữ liệu</th><th>Mô tả</th></tr>
-  <tr><td>TrangThaiThanhToan</td><td>VARCHAR(30)</td><td>Chưa thanh toán / Đã thanh toán / Chờ hoàn tiền / Đã hoàn tiền. Mặc định: Chưa thanh toán.</td></tr>
-  <tr><td>NgayThanhToan</td><td>DATETIME, NULL</td><td>Thời điểm cửa hàng xác nhận đã nhận tiền (chuyển khoản) hoặc giao thành công (COD).</td></tr>
-  <tr><td>NgayBaoChuyenKhoan</td><td>DATETIME, NULL</td><td>Thời điểm khách nhấn “Tôi đã chuyển khoản”; đơn có giá trị này không bị tự hủy khi quá hạn mà chờ nhân viên đối soát.</td></tr>
+  <tr><th>Tên thuộc tính</th><th>Kiểu dữ liệu</th><th>Khóa</th><th>Bắt buộc</th><th>Ghi chú / Ràng buộc</th></tr>
+  <tr><td>MaDH</td><td>VARCHAR(20)</td><td>PK</td><td>Not Null</td><td>Mã đơn hàng (Khóa chính)</td></tr>
+  <tr><td>NgayTao</td><td>DATETIME</td><td></td><td>Not Null</td><td>Ngày giờ đặt hàng (Mặc định thời điểm hiện tại)</td></tr>
+  <tr><td>TrangThai</td><td>NVARCHAR(50)</td><td></td><td>Not Null</td><td>Trạng thái xử lý đơn: Chờ thanh toán, Chờ xác nhận, Đang xử lý, Đang giao, Đã giao, Đã hủy</td></tr>
+  <tr><td>TongTien</td><td>DECIMAL(18,2)</td><td></td><td>Not Null</td><td>Tổng tiền khách thực tế phải trả (tiền hàng + phí vận chuyển − giảm giá)</td></tr>
+  <tr><td>TenNguoiNhan</td><td>NVARCHAR(100)</td><td></td><td>Not Null</td><td>Tên người nhận thực tế</td></tr>
+  <tr><td>SdtNguoiNhan</td><td>VARCHAR(15)</td><td></td><td>Not Null</td><td>SĐT người nhận thực tế</td></tr>
+  <tr><td>DiaChiNhan</td><td>NVARCHAR(255)</td><td></td><td>Not Null</td><td>Nơi giao hàng thực tế</td></tr>
+  <tr><td>PhuongThucThanhToan</td><td>NVARCHAR(50)</td><td></td><td>Not Null</td><td>COD (thanh toán khi nhận hàng), BANKING (chuyển khoản ngân hàng / ví điện tử qua VietQR)</td></tr>
+  <tr><td>TrangThaiThanhToan</td><td>NVARCHAR(30)</td><td></td><td>Not Null</td><td>Chưa thanh toán (mặc định), Đã thanh toán, Chờ hoàn tiền, Đã hoàn tiền</td></tr>
+  <tr><td>NgayThanhToan</td><td>DATETIME</td><td></td><td>Null</td><td>Thời điểm cửa hàng xác nhận đã nhận tiền (chuyển khoản) hoặc giao thành công (COD)</td></tr>
+  <tr><td>NgayBaoChuyenKhoan</td><td>DATETIME</td><td></td><td>Null</td><td>Thời điểm khách nhấn “Tôi đã chuyển khoản”; đơn có giá trị này không bị tự hủy khi quá hạn, chờ nhân viên đối soát</td></tr>
+  <tr><td>GhiChu</td><td>NVARCHAR(MAX)</td><td></td><td>Null</td><td>Lưu ý của khách hàng (VD: Căng 11kg); lý do hủy đơn</td></tr>
+  <tr><td>MaKH</td><td>VARCHAR(20)</td><td>FK</td><td>Not Null</td><td>Khóa ngoại → Liên kết đến bảng KhachHang(MaKH)</td></tr>
+  <tr><td>MaVoucher</td><td>VARCHAR(20)</td><td>FK</td><td>Null</td><td>Khóa ngoại → Voucher được áp dụng (nếu có)</td></tr>
 </table>
 
 <h2>5. Quan hệ giữa trạng thái đơn và trạng thái thanh toán</h2>
@@ -240,6 +263,53 @@ else (không)
   :Hiển thị "Thanh toán thất bại";
   stop
 endif
+@enduml</pre>
+
+<h2>7. Vẽ lại biểu đồ tuần tự Thanh toán (mục 3.2.4.11.13)</h2>
+<pre>@startuml
+autonumber
+actor "Khách hàng" as KH
+boundary "Giao diện
+Đặt hàng / VietQR" as UI
+control "Bộ điều khiển
+Đơn hàng" as C
+database "CSDL" as DB
+actor "Nhân viên
+bán hàng" as NV
+
+KH -> UI : Chọn phương thức, nhấn "Đặt hàng"
+UI -> C : Gửi đơn (giỏ hàng, người nhận,
+voucher, phương thức, tổng tiền đang thấy)
+C -> DB : Đọc tồn kho, giá bán, voucher
+DB --> C : Dữ liệu hiện hành
+alt Hết hàng / giá thay đổi / voucher không hợp lệ
+  C --> UI : Thông báo lỗi
+  UI --> KH : Hiển thị lỗi, không tạo đơn
+else Hợp lệ
+  C -> DB : [Giao dịch] Lưu đơn + chi tiết,
+trừ tồn kho, trừ 1 lượt voucher
+  DB --> C : Mã đơn
+  alt COD
+    C --> UI : Đơn "Chờ xác nhận"
+    UI --> KH : "Đặt hàng thành công" + mã đơn
+  else Chuyển khoản VietQR
+    C --> UI : Đơn "Chờ thanh toán", hạn 24 giờ
+    UI --> KH : Mã VietQR (số tiền, nội dung FBSHOP mã đơn)
+    KH -> UI : Chuyển khoản, nhấn "Tôi đã chuyển khoản"
+    UI -> C : Báo đã chuyển khoản
+    C -> DB : Lưu thời điểm khách báo
+    loop Mỗi 5 giây
+      UI -> C : Kiểm tra trạng thái đơn
+      C -> DB : Đọc đơn
+      C --> UI : Trạng thái hiện tại
+    end
+    NV -> C : Đối soát sao kê, "Xác nhận đã nhận tiền"
+    C -> DB : Thanh toán "Đã thanh toán",
+đơn "Chờ xác nhận"
+    C --> UI : Trạng thái mới
+    UI --> KH : "Thanh toán thành công" + mã đơn
+  end
+end
 @enduml</pre>
 
 <div class="note">
