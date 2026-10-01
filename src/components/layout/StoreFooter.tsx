@@ -51,9 +51,6 @@ export default function StoreFooter() {
               <span className="font-semibold text-navy">Email</span> contact@fbshop.vn
             </li>
           </ul>
-          <p className="mt-4 text-xs leading-relaxed text-slate-500">
-            Đồ án môn học – Hệ thống thông tin. Website phục vụ mục đích học tập và trình diễn.
-          </p>
         </div>
 
         <div className="lg:pl-10">
@@ -118,7 +115,7 @@ export default function StoreFooter() {
 
       <div className="border-t border-[#f66315]/15">
         <div className="container flex flex-col items-center justify-between gap-2 py-4 text-xs text-slate-500 sm:flex-row">
-          <p>© 2026 FBShop. Đồ án môn học – Hệ thống thông tin.</p>
+          <p>© 2026 FBShop. Bảo lưu mọi quyền.</p>
           <Link href="/admin" className="flex items-center gap-1 font-medium hover:text-[#f66315]">
             Trang quản trị
             <ArrowUpRight className="h-3.5 w-3.5" />

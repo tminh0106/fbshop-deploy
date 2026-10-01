@@ -50,18 +50,6 @@ export default function AdminLoginPage() {
     }
   };
 
-  const quickFill = (user: string, pass: string = "123456") => {
-    setTenDangNhap(user);
-    setMatKhau(pass);
-    setError("");
-  };
-
-  const QUICK_ACCOUNTS = [
-    { user: "admin@gmail.com", label: "Admin", desc: "Toàn quyền" },
-    { user: "kho@gmail.com", label: "Quản lý kho", desc: "Nhập/xuất kho" },
-    { user: "banhang@gmail.com", label: "Nhân viên", desc: "Xử lý đơn" },
-  ];
-
   const inputClass =
     "h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition-all focus:border-[#f66315] focus:ring-4 focus:ring-orange-100";
 
@@ -89,7 +77,7 @@ export default function AdminLoginPage() {
           <ul className="mt-10 space-y-4">
             {[
               { icon: Warehouse, text: "Phiếu nhập/xuất kho cập nhật tồn tức thì" },
-              { icon: ShoppingCart, text: "Theo dõi đơn hàng qua 4 trạng thái" },
+              { icon: ShoppingCart, text: "Theo dõi đơn hàng và thanh toán" },
               { icon: BarChart3, text: "Báo cáo doanh thu và top bán chạy" },
             ].map((f) => (
               <li key={f.text} className="flex items-center gap-3 text-sm text-slate-300">
@@ -102,9 +90,6 @@ export default function AdminLoginPage() {
           </ul>
         </div>
 
-        <p className="relative text-xs text-slate-500">
-          Đồ án FBShop · Microsoft SQL Server & Next.js
-        </p>
       </div>
 
       {/* Cot phai: form dang nhap */}
@@ -168,30 +153,6 @@ export default function AdminLoginPage() {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
           </form>
-
-          {/* Dien nhanh tai khoan demo */}
-          <div className="mt-10">
-            <div className="flex items-center gap-3 text-xs text-slate-400">
-              <span className="h-px flex-1 bg-slate-200" />
-              Tài khoản demo · mật khẩu 123456
-              <span className="h-px flex-1 bg-slate-200" />
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {QUICK_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.user}
-                  type="button"
-                  onClick={() => quickFill(acc.user)}
-                  className={`rounded-xl border px-2 py-2.5 text-center transition-all hover:border-[#f66315] hover:bg-orange-50 ${
-                    tenDangNhap === acc.user ? "border-[#f66315] bg-orange-50" : "border-slate-200"
-                  }`}
-                >
-                  <span className="block text-[13px] font-semibold text-slate-800">{acc.label}</span>
-                  <span className="block text-[11px] text-slate-500">{acc.desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -16,6 +16,8 @@ import {
   Printer,
   Wallet,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { exportToExcel } from "@/lib/exportExcel";
@@ -72,6 +74,21 @@ interface LineItem {
 
 type PayMode = "FULL" | "DEBT" | "PART";
 
+const PAGE_SIZE = 10;
+
+// Danh sach so trang hien thi: 1 … 4 5 6 … 12
+function pageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "...")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) pages.push("...");
+  for (let p = start; p <= end; p++) pages.push(p);
+  if (end < total - 1) pages.push("...");
+  pages.push(total);
+  return pages;
+}
+
 const SEARCH_FORBIDDEN = /[<>{}[\]\\;'"`=%$^*|~]/;
 const money = (n: number | string) => `${Number(n || 0).toLocaleString("vi-VN")} đ`;
 const fmtDateTime = (d: string) =>
@@ -81,6 +98,7 @@ export default function HoaDonKhoPage() {
   const [invoices, setInvoices] = useState<HoaDonKhoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searched, setSearched] = useState(false);
+  const [page, setPage] = useState(1);
 
   // Bo loc
   const [keyword, setKeyword] = useState("");
@@ -349,6 +367,11 @@ export default function HoaDonKhoPage() {
     }
   };
 
+  // ---------- Phan trang: sau thao tac van giu trang hien tai, tu lui ve trang cuoi neu het dong ----------
+  const pageCount = Math.max(1, Math.ceil(invoices.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedInvoices = invoices.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   // ---------- Tong hop ----------
   const summary = useMemo(() => {
     const active = invoices.filter((i) => !isInvoiceCancelled(i.TrangThai));
@@ -425,6 +448,7 @@ export default function HoaDonKhoPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            setPage(1);
             fetchInvoices();
           }}
           className="grid grid-cols-1 gap-3 md:grid-cols-12"
@@ -461,17 +485,15 @@ export default function HoaDonKhoPage() {
         </form>
       </div>
 
-      {/* Danh sach phieu */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+      {/* Danh sach phieu (phan trang 10 dong) */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50/80 font-bold text-slate-700 uppercase">
-              <tr>
+          <table className="w-full min-w-[960px] text-left text-xs">
+            <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+              <tr className="whitespace-nowrap">
                 <th className="px-4 py-3">Số phiếu</th>
-                <th className="px-4 py-3">Ngày lập</th>
-                <th className="px-4 py-3">Nghiệp vụ</th>
+                <th className="px-4 py-3">Loại / Nghiệp vụ</th>
                 <th className="px-4 py-3">Đối tượng</th>
-                <th className="px-4 py-3">Chứng từ gốc</th>
                 <th className="px-4 py-3 text-right">Tổng tiền</th>
                 <th className="px-4 py-3 text-center">Thanh toán NCC</th>
                 <th className="px-4 py-3 text-center">Trạng thái</th>
@@ -481,23 +503,34 @@ export default function HoaDonKhoPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">Đang tải danh sách phiếu kho...</td>
+                  <td colSpan={7} className="py-12 text-center font-medium text-slate-400">Đang tải danh sách phiếu kho...</td>
                 </tr>
               ) : invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="py-12 text-center font-medium text-slate-400">
                     {searched ? "Không tìm thấy hóa đơn kho nào phù hợp" : "Chưa có phiếu kho nào"}
                   </td>
                 </tr>
               ) : (
-                invoices.map((inv) => {
+                pagedInvoices.map((inv) => {
                   const isNhap = inv.LoaiPhieu === "NHAP";
                   const isHuy = isInvoiceCancelled(inv.TrangThai);
+                  const doiTuong = inv.NhaCungCap?.TenNCC || inv.NguoiGiaoNhan || "—";
                   return (
-                    <tr key={inv.MaHDK} className={`transition-colors hover:bg-slate-50/60 ${isHuy ? "opacity-60" : ""}`}>
-                      <td className="px-4 py-3 font-mono font-bold text-slate-900">{inv.MaHDK}</td>
-                      <td className="px-4 py-3 text-slate-600">{fmtDateTime(inv.NgayLap)}</td>
-                      <td className="px-4 py-3">
+                    <tr key={inv.MaHDK} className={`align-middle transition-colors hover:bg-slate-50/70 ${isHuy ? "bg-slate-50/40" : ""}`}>
+                      {/* So phieu + ngay lap */}
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => setViewing(inv)}
+                          className={`font-mono text-[13px] font-bold hover:text-[#f66315] ${isHuy ? "text-slate-400 line-through" : "text-slate-900"}`}
+                        >
+                          {inv.MaHDK}
+                        </button>
+                        <p className="mt-0.5 text-[11px] text-slate-500">{fmtDateTime(inv.NgayLap)}</p>
+                      </td>
+
+                      {/* Loai phieu + nghiep vu */}
+                      <td className="whitespace-nowrap px-4 py-3">
                         <span
                           className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-bold ${
                             isNhap ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700"
@@ -508,30 +541,47 @@ export default function HoaDonKhoPage() {
                         </span>
                         <p className="mt-1 text-[11px] text-slate-500">{inv.NghiepVu || (isNhap ? "Nhập mua hàng" : "Xuất khác")}</p>
                       </td>
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-slate-800">{inv.NhaCungCap?.TenNCC || inv.NguoiGiaoNhan || "—"}</p>
+
+                      {/* Doi tuong + nguoi giao/nhan + chung tu goc */}
+                      <td className="max-w-[260px] px-4 py-3">
+                        <p className="truncate font-semibold text-slate-800" title={doiTuong}>
+                          {doiTuong}
+                        </p>
                         {inv.NhaCungCap && inv.NguoiGiaoNhan && (
-                          <p className="text-[11px] text-slate-500">
+                          <p className="truncate text-[11px] text-slate-500" title={inv.NguoiGiaoNhan}>
                             {isNhap ? "Người giao" : "Người nhận"}: {inv.NguoiGiaoNhan}
                           </p>
                         )}
+                        {inv.SoChungTu && (
+                          <p className="truncate text-[11px] text-slate-400" title={inv.SoChungTu}>
+                            Chứng từ: {inv.SoChungTu}
+                          </p>
+                        )}
                       </td>
-                      <td className="px-4 py-3 font-mono text-slate-600">{inv.SoChungTu || "—"}</td>
-                      <td className="px-4 py-3 text-right font-bold text-slate-900">{money(inv.TongTien)}</td>
-                      <td className="px-4 py-3 text-center">
+
+                      <td className={`whitespace-nowrap px-4 py-3 text-right text-[13px] font-bold ${isHuy ? "text-slate-400" : "text-slate-900"}`}>
+                        {money(inv.TongTien)}
+                      </td>
+
+                      {/* Thanh toan NCC (chi phieu nhap) */}
+                      <td className="whitespace-nowrap px-4 py-3 text-center">
                         {!isNhap || isHuy ? (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-300">—</span>
                         ) : inv.CongNo > 0 ? (
-                          <span className="inline-block rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600">
-                            Còn nợ {money(inv.CongNo)}
-                          </span>
+                          <div>
+                            <span className="inline-block rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600">
+                              Còn nợ
+                            </span>
+                            <p className="mt-0.5 text-[11px] font-semibold text-red-600">{money(inv.CongNo)}</p>
+                          </div>
                         ) : (
                           <span className="inline-block rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
                             Đã thanh toán
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-center">
+
+                      <td className="whitespace-nowrap px-4 py-3 text-center">
                         <span
                           className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
                             isHuy ? "border-red-200 bg-red-50 text-red-600" : "border-emerald-200 bg-emerald-50 text-emerald-600"
@@ -541,7 +591,8 @@ export default function HoaDonKhoPage() {
                           {isHuy ? "Đã hủy" : "Hoàn thành"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+
+                      <td className="whitespace-nowrap px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
                           <button onClick={() => setViewing(inv)} className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100" title="Xem chi tiết">
                             <Eye className="h-3.5 w-3.5" />
@@ -589,6 +640,51 @@ export default function HoaDonKhoPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Phan trang */}
+        {!loading && invoices.length > 0 && (
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-600 sm:flex-row">
+            <p>
+              Hiển thị <strong>{(currentPage - 1) * PAGE_SIZE + 1}</strong>–
+              <strong>{Math.min(currentPage * PAGE_SIZE, invoices.length)}</strong> trong <strong>{invoices.length}</strong> phiếu
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                title="Trang trước"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {pageNumbers(currentPage, pageCount).map((p, i) =>
+                p === "..." ? (
+                  <span key={`gap-${i}`} className="px-1 text-slate-400">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`h-8 min-w-8 rounded-lg px-2 font-semibold ${
+                      p === currentPage ? "bg-[#f66315] text-white" : "border border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage === pageCount}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                title="Trang sau"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================= MODAL LAP PHIEU ================= */}
