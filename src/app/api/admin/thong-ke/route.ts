@@ -7,14 +7,18 @@ import { requireFeature } from "@/lib/auth";
 // - Doanh thu chi ghi nhan don "Da giao" (NFR-01: sau khi don ban le hoan tat)
 // - Loi nhuan gop = Doanh thu - Gia von hang ban (FR-30)
 //   Gia von 1 san pham = don gia nhap binh quan gia quyen tu cac phieu NHAP chua huy
+// - Ton kho la so lieu thoi gian thuc, khong phu thuoc khoang ngay (Bang 3.35)
 // - Ngay tinh theo gio Viet Nam (UTC+7)
+// Tra du lieu chi tiet; trang bao cao loc theo danh muc / trang thai ton / top / phan hang.
 // =======================================================
 
 const ORDER_DONE = "Da giao";
 const ORDER_CANCELLED = "Da huy";
 const INVOICE_CANCELLED = "Da huy";
-const LOW_STOCK_THRESHOLD = 5;
 const STOPPED_TAG = "[NGỪNG KINH DOANH]";
+// Ton kho (FR-31): sap het khi con <= 5; ton dong khi con hang ma khong ban duoc trong 60 ngay gan nhat
+const LOW_STOCK_THRESHOLD = 5;
+const SLOW_MOVING_DAYS = 60;
 // Phan hang khach (FR-33): VIP theo tong chi tieu, than thiet theo so lan quay lai mua
 const VIP_SPENDING = 10_000_000;
 const LOYAL_MIN_ORDERS = 2;
@@ -50,12 +54,18 @@ export async function GET(request: Request) {
     const from = tuNgay ? new Date(`${tuNgay}T00:00:00.000+07:00`) : undefined;
     const to = denNgay ? new Date(`${denNgay}T23:59:59.999+07:00`) : undefined;
     const range = from || to ? { ...(from && { gte: from }), ...(to && { lte: to }) } : undefined;
+    const inRange = (d: Date) => (!from || d >= from) && (!to || d <= to);
 
-    const [orders, importInvoicesInRange, importDetails, allProducts] = await Promise.all([
+    const [orders, allDone, importInvoicesInRange, importDetails, allProducts, categories] = await Promise.all([
       prisma.donHang.findMany({
         where: range ? { NgayTao: range } : {},
         include: { ChiTietDonHangs: true, KhachHang: true },
         orderBy: { NgayTao: "asc" },
+      }),
+      // Toan bo don da giao (khong gioi han ky): lan ban cuoi cua san pham, don dau tien cua khach
+      prisma.donHang.findMany({
+        where: { TrangThai: ORDER_DONE },
+        select: { MaKH: true, NgayTao: true, ChiTietDonHangs: { select: { MaSP: true } } },
       }),
       prisma.hoaDonKho.findMany({
         where: { LoaiPhieu: "NHAP", TrangThai: { not: INVOICE_CANCELLED }, ...(range && { NgayLap: range }) },
@@ -66,7 +76,8 @@ export async function GET(request: Request) {
         where: { HoaDonKho: { LoaiPhieu: "NHAP", TrangThai: { not: INVOICE_CANCELLED } } },
         select: { MaSP: true, SoLuong: true, ThanhTien: true },
       }),
-      prisma.sanPham.findMany({ include: { DanhMuc: true } }),
+      prisma.sanPham.findMany({ include: { DanhMuc: true }, orderBy: { MaSP: "asc" } }),
+      prisma.danhMuc.findMany({ orderBy: { TenDanhMuc: "asc" } }),
     ]);
 
     // ---- Gia von binh quan gia quyen theo san pham ----
@@ -82,7 +93,7 @@ export async function GET(request: Request) {
       return a && a.qty > 0 ? a.amount / a.qty : null;
     };
 
-    // ---- Phan loai don hang ----
+    // ---- Phan loai don hang trong ky ----
     const completed = orders.filter((o) => o.TrangThai === ORDER_DONE);
     const pending = orders.filter((o) => o.TrangThai !== ORDER_DONE && o.TrangThai !== ORDER_CANCELLED);
     const cancelledCount = orders.filter((o) => o.TrangThai === ORDER_CANCELLED).length;
@@ -101,7 +112,7 @@ export async function GET(request: Request) {
 
     let totalRevenue = 0;
     let totalCOGS = 0;
-    const byPeriod = new Map<string, { doanhThu: number; giaVon: number }>();
+    const byPeriod = new Map<string, { soDon: number; doanhThu: number; giaVon: number }>();
 
     // Chon do chia truc thoi gian: theo ngay, hoac theo thang neu khoang qua dai
     const endDay = denNgay || vnDay(new Date());
@@ -121,50 +132,74 @@ export async function GET(request: Request) {
       totalRevenue += revenue;
       totalCOGS += cogs;
       const k = keyOf(vnDay(o.NgayTao));
-      const p = byPeriod.get(k) || { doanhThu: 0, giaVon: 0 };
+      const p = byPeriod.get(k) || { soDon: 0, doanhThu: 0, giaVon: 0 };
+      p.soDon += 1;
       p.doanhThu += revenue;
       p.giaVon += cogs;
       byPeriod.set(k, p);
     }
 
     // Dien du cac moc thoi gian (ke ca ngay/thang khong co don) de bieu do khong bi noi tat
-    const revenueTimeline: { ngay: string; doanhThu: number; loiNhuan: number }[] = [];
+    const revenueTimeline: { ngay: string; soDon: number; doanhThu: number; giaVon: number; loiNhuan: number }[] = [];
     const seen = new Set<string>();
     for (let t = Date.parse(startDay); t <= Date.parse(endDay); t += DAY_MS) {
       const k = keyOf(new Date(t).toISOString().slice(0, 10));
       if (seen.has(k)) continue;
       seen.add(k);
-      const p = byPeriod.get(k) || { doanhThu: 0, giaVon: 0 };
-      revenueTimeline.push({ ngay: k, doanhThu: p.doanhThu, loiNhuan: Math.round(p.doanhThu - p.giaVon) });
+      const p = byPeriod.get(k) || { soDon: 0, doanhThu: 0, giaVon: 0 };
+      revenueTimeline.push({
+        ngay: k,
+        soDon: p.soDon,
+        doanhThu: p.doanhThu,
+        giaVon: Math.round(p.giaVon),
+        loiNhuan: Math.round(p.doanhThu - p.giaVon),
+      });
     }
 
     const totalImportCost = importInvoicesInRange.reduce((s, inv) => s + Number(inv.TongTien), 0);
     const grossProfit = Math.round(totalRevenue - totalCOGS);
 
-    // ---- 2. Ton kho (Bang 3.35) - bo qua san pham ngung kinh doanh ----
+    // ---- 2. Ton kho & kho hang (Bang 3.35) - thoi gian thuc, bo qua san pham ngung kinh doanh ----
+    const lastSold = new Map<string, Date>();
+    for (const o of allDone) {
+      for (const ct of o.ChiTietDonHangs) {
+        const prev = lastSold.get(ct.MaSP);
+        if (!prev || o.NgayTao > prev) lastSold.set(ct.MaSP, o.NgayTao);
+      }
+    }
+    const now = Date.now();
     const activeProducts = allProducts.filter((p) => !p.MoTa?.includes(STOPPED_TAG));
-    const lowStockProducts = activeProducts
-      .filter((p) => p.SoLuong <= LOW_STOCK_THRESHOLD)
-      .sort((a, b) => a.SoLuong - b.SoLuong)
-      .map((p) => ({
+    const inventory = activeProducts.map((p) => {
+      const sold = lastSold.get(p.MaSP) || null;
+      const daysIdle = sold ? Math.floor((now - sold.getTime()) / DAY_MS) : null;
+      const trangThai =
+        p.SoLuong === 0
+          ? "Hết hàng"
+          : p.SoLuong <= LOW_STOCK_THRESHOLD
+          ? "Sắp hết hàng"
+          : daysIdle === null || daysIdle > SLOW_MOVING_DAYS
+          ? "Tồn đọng"
+          : "Bình thường";
+      const cost = unitCost(p.MaSP);
+      return {
         maSP: p.MaSP,
         tenSP: p.TenSP,
+        maDanhMuc: p.MaDanhMuc,
+        danhMuc: p.DanhMuc?.TenDanhMuc || "Chưa phân loại",
         soLuong: p.SoLuong,
         giaBan: Number(p.GiaBan),
-        danhMuc: p.DanhMuc?.TenDanhMuc || "Chưa phân loại",
-        mucDoCanhBao: p.SoLuong === 0 ? "Hết hàng" : "Sắp hết hàng",
-      }));
+        // Gia tri ton theo gia von (chua co gia nhap thi tam tinh theo gia ban)
+        giaTriTon: Math.round(p.SoLuong * (cost ?? Number(p.GiaBan))),
+        lanBanCuoi: sold ? sold.toISOString() : null,
+        soNgayChuaBan: daysIdle,
+        trangThai,
+      };
+    });
+    const lowStockProducts = inventory
+      .filter((p) => p.soLuong <= LOW_STOCK_THRESHOLD)
+      .sort((a, b) => a.soLuong - b.soLuong);
 
-    const stockByCategory = new Map<string, number>();
-    for (const p of activeProducts) {
-      const cat = p.DanhMuc?.TenDanhMuc || "Khác";
-      stockByCategory.set(cat, (stockByCategory.get(cat) || 0) + p.SoLuong);
-    }
-    const stockPieData = [...stockByCategory]
-      .filter(([, value]) => value > 0)
-      .map(([name, value]) => ({ name, value }));
-
-    // ---- 3. Hieu suat ban hang (Bang 3.36) - tinh tren don da giao ----
+    // ---- 3. Ban hang & hieu suat san pham (Bang 3.36) - tinh tren don da giao trong ky ----
     const sales = new Map<string, { soLuongBan: number; doanhThu: number }>();
     for (const o of completed) {
       for (const ct of o.ChiTietDonHangs) {
@@ -174,42 +209,54 @@ export async function GET(request: Request) {
         sales.set(ct.MaSP, s);
       }
     }
-    const nameOf = new Map(allProducts.map((p) => [p.MaSP, p.TenSP]));
-
-    const topBestSellers = [...sales]
-      .map(([maSP, s]) => ({ maSP, tenSP: nameOf.get(maSP) || maSP, ...s }))
-      .sort((a, b) => b.soLuongBan - a.soLuongBan || b.doanhThu - a.doanhThu)
-      .slice(0, 5);
-
-    // Ban cham: ban it nhat trong ky, cung muc thi uu tien ton nhieu hon (dong von lau)
-    const sortedSlowMoving = activeProducts
+    const productById = new Map(allProducts.map((p) => [p.MaSP, p]));
+    // Moi san pham dang kinh doanh + san pham da ngung nhung co ban trong ky
+    const salesRows = allProducts
+      .filter((p) => !p.MoTa?.includes(STOPPED_TAG) || sales.has(p.MaSP))
       .map((p) => ({
         maSP: p.MaSP,
         tenSP: p.TenSP,
-        soLuongTon: p.SoLuong,
+        maDanhMuc: p.MaDanhMuc,
+        danhMuc: p.DanhMuc?.TenDanhMuc || "Chưa phân loại",
         soLuongBan: sales.get(p.MaSP)?.soLuongBan || 0,
-      }))
-      .sort((a, b) => a.soLuongBan - b.soLuongBan || b.soLuongTon - a.soLuongTon)
-      .slice(0, 5);
+        doanhThu: sales.get(p.MaSP)?.doanhThu || 0,
+        soLuongTon: p.SoLuong,
+      }));
+    for (const [maSP, s] of sales) {
+      if (!productById.has(maSP)) {
+        salesRows.push({ maSP, tenSP: maSP, maDanhMuc: "", danhMuc: "Chưa phân loại", ...s, soLuongTon: 0 });
+      }
+    }
 
-    // ---- 4. Khach hang (Bang 3.37) - tan suat mua va phan hang ----
-    const customers = new Map<string, { hoTen: string; sdt: string; soDon: number; tongTien: number }>();
+    // ---- 4. Khach hang (Bang 3.37) - khach moi, tan suat mua va phan hang ----
+    // Khach moi = khach co don da giao DAU TIEN nam trong ky bao cao
+    const firstOrder = new Map<string, Date>();
+    for (const o of allDone) {
+      const prev = firstOrder.get(o.MaKH);
+      if (!prev || o.NgayTao < prev) firstOrder.set(o.MaKH, o.NgayTao);
+    }
+    const customers = new Map<string, { maKH: string; hoTen: string; sdt: string; soDon: number; tongTien: number }>();
     for (const o of completed) {
       const kh = o.KhachHang;
       if (!kh) continue;
-      const c = customers.get(kh.MaKH) || { hoTen: kh.HoTen, sdt: kh.SoDienThoai, soDon: 0, tongTien: 0 };
+      const c = customers.get(kh.MaKH) || { maKH: kh.MaKH, hoTen: kh.HoTen, sdt: kh.SoDienThoai, soDon: 0, tongTien: 0 };
       c.soDon += 1;
       c.tongTien += Number(o.TongTien);
       customers.set(kh.MaKH, c);
     }
     const rank = (c: { soDon: number; tongTien: number }) =>
       c.tongTien >= VIP_SPENDING ? "VIP" : c.soDon >= LOYAL_MIN_ORDERS ? "Thân thiết" : "Thường";
-
-    const allCustomers = [...customers.values()];
-    const topCustomers = allCustomers
-      .sort((a, b) => b.tongTien - a.tongTien)
-      .slice(0, 5)
-      .map((c) => ({ ...c, hang: rank(c) }));
+    const customerRows = [...customers.values()]
+      .map((c) => {
+        const first = firstOrder.get(c.maKH);
+        return {
+          ...c,
+          hang: rank(c),
+          donDauTien: first ? first.toISOString() : null,
+          khachMoi: !!first && inRange(first),
+        };
+      })
+      .sort((a, b) => b.tongTien - a.tongTien);
 
     return NextResponse.json({
       success: true,
@@ -225,18 +272,29 @@ export async function GET(request: Request) {
           cancelledOrders: cancelledCount,
           productsWithoutCost: productsWithoutCost.size,
           totalProducts: activeProducts.length,
+          totalStock: inventory.reduce((s, p) => s + p.soLuong, 0),
+          stockValue: inventory.reduce((s, p) => s + p.giaTriTon, 0),
           lowStockCount: lowStockProducts.length,
-          buyingCustomers: allCustomers.length,
-          returningCustomers: allCustomers.filter((c) => c.soDon >= LOYAL_MIN_ORDERS).length,
-          vipCustomers: allCustomers.filter((c) => c.tongTien >= VIP_SPENDING).length,
+          slowMovingCount: inventory.filter((p) => p.trangThai === "Tồn đọng").length,
+          soldQuantity: [...sales.values()].reduce((s, x) => s + x.soLuongBan, 0),
+          buyingCustomers: customerRows.length,
+          newCustomers: customerRows.filter((c) => c.khachMoi).length,
+          returningCustomers: customerRows.filter((c) => c.soDon >= LOYAL_MIN_ORDERS).length,
+          vipCustomers: customerRows.filter((c) => c.hang === "VIP").length,
         },
+        thresholds: {
+          lowStock: LOW_STOCK_THRESHOLD,
+          slowMovingDays: SLOW_MOVING_DAYS,
+          vipSpending: VIP_SPENDING,
+          loyalMinOrders: LOYAL_MIN_ORDERS,
+        },
+        categories: categories.map((c) => ({ id: c.MaDanhMuc, name: c.TenDanhMuc })),
         timelineUnit: byMonth ? "month" : "day",
         revenueTimeline,
-        stockPieData,
+        inventory,
         lowStockProducts,
-        topBestSellers,
-        sortedSlowMoving,
-        topCustomers,
+        sales: salesRows,
+        customers: customerRows,
       },
     });
   } catch (error) {
