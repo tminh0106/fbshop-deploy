@@ -17,7 +17,36 @@
           "pm.variables.set('now', fmt(new Date(now)));",
           "pm.variables.set('yesterday', fmt(new Date(now - DAY)));",
           "pm.variables.set('tomorrow', fmt(new Date(now + DAY)));",
-          "pm.variables.set('in30d', fmt(new Date(now + 31 * DAY)));"
+          "pm.variables.set('in30d', fmt(new Date(now + 31 * DAY)));",
+          "",
+          "// Gui kem phien dang nhap (khach hang + quan tri) da luu tu cac lan dang nhap truoc",
+          "// Request co header X-No-Cookie: kiem thu truong hop chua dang nhap -> khong gui",
+          "if (pm.request.headers.has('X-No-Cookie')) {",
+          "  pm.request.headers.remove('X-No-Cookie');",
+          "} else {",
+          "  const parts = [];",
+          "  const kh = pm.collectionVariables.get('custToken');",
+          "  const qt = pm.collectionVariables.get('adminToken');",
+          "  if (kh) parts.push('fbshop_token=' + kh);",
+          "  if (qt) parts.push('fbshop_admin_token=' + qt);",
+          "  if (parts.length) pm.request.headers.upsert({ key: 'Cookie', value: parts.join('; ') });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Luu phien dang nhap tu header Set-Cookie (dang nhap / dang ky / dang xuat)",
+          "pm.response.headers.each((h) => {",
+          "  if (h.key.toLowerCase() !== 'set-cookie') return;",
+          "  const m = /^(fbshop_token|fbshop_admin_token)=([^;]*)/.exec(h.value);",
+          "  if (!m) return;",
+          "  const cleared = !m[2] || /max-age=0/i.test(h.value);",
+          "  pm.collectionVariables.set(m[1] === 'fbshop_token' ? 'custToken' : 'adminToken', cleared ? '' : m[2]);",
+          "});"
         ]
       }
     }
@@ -42,6 +71,14 @@
     {
       "key": "password",
       "value": "123456"
+    },
+    {
+      "key": "custToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
     }
   ],
   "item": [
@@ -94,7 +131,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -109,6 +149,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -141,6 +186,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -173,6 +223,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -205,6 +260,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -237,6 +297,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -269,6 +334,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -301,6 +371,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -333,6 +408,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -386,13 +466,16 @@
                   "  pm.expect(res.customer.soDienThoai).to.eql(pm.collectionVariables.get('custPhone'));",
                   "});",
                   "pm.test(\"Đăng nhập luôn sau khi đăng ký (có cookie phiên)\", () => {",
-                  "  pm.expect(pm.cookies.has('fbshop_token')).to.be.true;",
+                  "  pm.expect(pm.collectionVariables.get('custToken')).to.not.be.empty;",
                   "});",
                   "pm.collectionVariables.set(\"maKH\", res.customer.maKH);"
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-08 Đăng ký: trùng số điện thoại",
@@ -402,6 +485,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -434,6 +522,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -476,7 +569,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-11 Sau khi đăng xuất không còn phiên",
@@ -498,7 +594,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-12 Đăng nhập: bỏ trống",
@@ -527,7 +626,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-13 Đăng nhập: sai mật khẩu",
@@ -556,7 +658,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-14 Đăng nhập: SĐT chưa đăng ký",
@@ -585,7 +690,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-15 Đăng nhập cửa hàng bằng tài khoản quản trị",
@@ -614,7 +722,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-16 Đăng nhập khách hàng thành công",
@@ -645,7 +756,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-17 Xem thông tin cá nhân",
@@ -669,7 +783,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-18 Cập nhật thông tin: bỏ trống họ tên",
@@ -698,7 +815,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-19 Cập nhật thông tin: email sai",
@@ -727,7 +847,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-19b Cập nhật thông tin: xóa trắng email",
@@ -756,7 +879,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-19c Cập nhật thông tin: họ tên quá 100 ký tự",
@@ -785,7 +911,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-19d Cập nhật thông tin: địa chỉ quá 255 ký tự",
@@ -814,7 +943,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KH-20 Cập nhật thông tin hợp lệ",
@@ -845,7 +977,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-01 Đăng nhập quản trị: bỏ trống",
@@ -874,7 +1009,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-02 Đăng nhập quản trị: sai mật khẩu",
@@ -903,7 +1041,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-03 Đăng nhập quản trị bằng SĐT khách hàng",
@@ -932,7 +1073,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-04 Đăng nhập Admin thành công",
@@ -962,12 +1106,15 @@
                   "  pm.expect(res.user.role).to.eql('Admin');",
                   "});",
                   "pm.test(\"Có cookie phiên quản trị\", () => {",
-                  "  pm.expect(pm.cookies.has('fbshop_admin_token')).to.be.true;",
+                  "  pm.expect(pm.collectionVariables.get('adminToken')).to.not.be.empty;",
                   "});"
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-05 Xem phiên đăng nhập quản trị",
@@ -989,7 +1136,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-06 Đổi mật khẩu: bỏ trống",
@@ -1018,7 +1168,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-07 Đổi mật khẩu: mật khẩu mới dưới 6 ký tự",
@@ -1047,7 +1200,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-08 Đổi mật khẩu: mật khẩu mới trùng mật khẩu cũ",
@@ -1076,7 +1232,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-09 Đổi mật khẩu: sai mật khẩu hiện tại",
@@ -1105,7 +1264,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -1140,7 +1302,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-02 Tìm kiếm theo tên (yonex)",
@@ -1164,7 +1329,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-03 Tìm kiếm không có kết quả",
@@ -1188,7 +1356,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-04 Sắp xếp giá tăng dần",
@@ -1211,7 +1382,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-05 Sắp xếp giá giảm dần",
@@ -1234,7 +1408,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-06 Lọc theo danh mục",
@@ -1258,7 +1435,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-07 Lọc theo khoảng giá 1.000.000 - 3.000.000đ",
@@ -1281,7 +1461,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-08 Phân trang (trang 2, 5 sản phẩm/trang)",
@@ -1306,7 +1489,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-08b Tham số phân trang không hợp lệ",
@@ -1329,7 +1515,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-09 Xem chi tiết sản phẩm theo mã",
@@ -1354,7 +1543,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-10 Xem chi tiết sản phẩm theo đường dẫn (slug)",
@@ -1376,7 +1568,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "SP-11 Xem sản phẩm không tồn tại",
@@ -1396,7 +1591,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "GH-01 Đồng bộ giỏ hàng: lấy giá và tồn kho hiện tại",
@@ -1432,7 +1630,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "GH-02 Đồng bộ giỏ hàng: giỏ trống",
@@ -1463,7 +1664,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "GH-03 Đồng bộ giỏ hàng: dữ liệu không hợp lệ",
@@ -1492,7 +1696,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -1538,7 +1745,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Chuẩn bị: tạo voucher bắt đầu từ ngày mai",
@@ -1566,7 +1776,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VC-01 Kiểm tra mã: bỏ trống",
@@ -1595,7 +1808,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VC-02 Kiểm tra mã: mã không tồn tại",
@@ -1624,7 +1840,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VC-03 Kiểm tra mã: chưa đến thời gian sử dụng",
@@ -1653,7 +1872,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VC-04 Kiểm tra mã: đơn chưa đạt giá trị tối thiểu",
@@ -1682,7 +1904,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VC-05 Kiểm tra mã hợp lệ",
@@ -1715,7 +1940,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -1726,7 +1954,13 @@
           "name": "DH-01 Chưa đăng nhập: xem đơn hàng",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
+              }
+            ],
             "url": "{{baseUrl}}/api/don-hang"
           },
           "event": [
@@ -1753,6 +1987,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -1804,7 +2043,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-04 SĐT người nhận sai định dạng",
@@ -1833,7 +2075,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-05 Bỏ trống địa chỉ nhận hàng",
@@ -1862,7 +2107,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-05b Địa chỉ nhận hàng quá 255 ký tự",
@@ -1891,7 +2139,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-05c Ghi chú quá 400 ký tự",
@@ -1920,7 +2171,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-06 Giỏ hàng trống",
@@ -1949,7 +2203,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-07 Phương thức thanh toán không hợp lệ",
@@ -1978,7 +2235,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-08 Số lượng bằng 0",
@@ -2007,7 +2267,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-09 Số lượng là số thập phân",
@@ -2036,7 +2299,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-10 Sản phẩm không tồn tại",
@@ -2065,7 +2331,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-11 Đặt vượt số lượng tồn kho",
@@ -2094,7 +2363,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-12 Mã giảm giá không tồn tại",
@@ -2123,7 +2395,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-13 Mã giảm giá chưa đến thời gian sử dụng",
@@ -2152,7 +2427,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-14 Tổng tiền trên trang khác tổng tiền hệ thống tính",
@@ -2181,7 +2459,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-15 Đặt hàng COD có mã giảm giá",
@@ -2228,7 +2509,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-16 Tồn kho giảm 1 sau khi đặt",
@@ -2252,7 +2536,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-17 Voucher giảm 1 lượt sau khi đặt",
@@ -2274,7 +2561,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-17b Mỗi khách chỉ dùng mã 1 lần: kiểm tra mã",
@@ -2303,7 +2593,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-17c Mỗi khách chỉ dùng mã 1 lần: đặt đơn thứ 2",
@@ -2332,7 +2625,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-18 Xem danh sách đơn hàng của tôi",
@@ -2361,7 +2657,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-19 Xem chi tiết đơn hàng",
@@ -2384,7 +2683,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-20 Xem đơn hàng không tồn tại / của người khác",
@@ -2404,7 +2706,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-21 Hủy đơn: chưa chọn lý do",
@@ -2433,7 +2738,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-22 Khách hủy đơn chờ xác nhận",
@@ -2462,7 +2770,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-23 Hủy đơn hoàn trả tồn kho",
@@ -2486,7 +2797,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-24 Hủy đơn hoàn trả lượt dùng voucher",
@@ -2508,7 +2822,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-24b Hủy đơn thì khách dùng lại được mã",
@@ -2539,7 +2856,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-25 Hủy lại đơn đã hủy",
@@ -2568,7 +2888,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-26 Đặt hàng chuyển khoản (VietQR)",
@@ -2614,7 +2937,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-27 Khách báo đã chuyển khoản",
@@ -2634,7 +2960,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-28 Không tự hủy được đơn đã báo chuyển khoản",
@@ -2663,7 +2992,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "DH-29 Báo chuyển khoản cho đơn đã hủy",
@@ -2683,7 +3015,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -2713,7 +3048,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-02 Lọc đơn theo trạng thái Chờ thanh toán",
@@ -2735,7 +3073,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-03 Từ khóa tìm kiếm không hợp lệ",
@@ -2755,7 +3096,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-04 Khoảng ngày lọc không hợp lệ",
@@ -2775,7 +3119,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-05 Cập nhật trạng thái: bỏ trống",
@@ -2804,7 +3151,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-06 Cập nhật trạng thái đơn không tồn tại",
@@ -2833,7 +3183,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-07 Chuyển sai quy trình (Chờ thanh toán → Đang xử lý)",
@@ -2862,7 +3215,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-08 Xác nhận đã nhận tiền chuyển khoản",
@@ -2891,7 +3247,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-09 Khách thấy đơn đã thanh toán",
@@ -2913,7 +3272,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-10 Chuyển sai quy trình (Chờ xác nhận → Đã giao)",
@@ -2942,7 +3304,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-11 Chuyển sang Đang xử lý",
@@ -2971,7 +3336,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-12 Không xóa được đơn đã thanh toán",
@@ -2991,7 +3359,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-13 Xác nhận hoàn tiền khi đơn chưa hủy",
@@ -3011,7 +3382,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-14 Hủy đơn đã thanh toán",
@@ -3040,7 +3414,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-15 Hủy đơn hoàn trả tồn kho",
@@ -3064,7 +3441,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-16 Khách thấy đơn chờ hoàn tiền",
@@ -3086,7 +3466,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-17 Không mở lại đơn đã hủy",
@@ -3115,7 +3498,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-18 Xác nhận đã hoàn tiền cho khách",
@@ -3135,7 +3521,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-19 Khách thấy đơn đã hoàn tiền",
@@ -3157,7 +3546,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-20 Xem lịch sử mua hàng của khách",
@@ -3181,7 +3573,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-21 Lịch sử mua hàng của khách không tồn tại",
@@ -3201,7 +3596,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Chuẩn bị: tìm 1 đơn đã giao có sẵn",
@@ -3225,7 +3623,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-22 Không xóa được đơn đã giao",
@@ -3245,7 +3646,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-23 Xóa đơn đã hủy (chưa thanh toán)",
@@ -3265,7 +3669,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-24 Xóa đơn đã hủy và đã hoàn tiền",
@@ -3285,7 +3692,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-25 Xóa đơn không tồn tại",
@@ -3305,7 +3715,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLDH-26 Xác nhận hoàn tiền đơn không tồn tại",
@@ -3325,7 +3738,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -3354,7 +3770,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Chuẩn bị: lấy khách hàng khác để kiểm tra trùng",
@@ -3382,7 +3801,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-02 Từ khóa tìm kiếm không hợp lệ",
@@ -3402,7 +3824,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-03 Sửa: thiếu mã khách hàng",
@@ -3431,7 +3856,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-04 Sửa: khách hàng không tồn tại",
@@ -3460,7 +3888,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-05 Sửa: bỏ trống họ tên",
@@ -3489,7 +3920,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-06 Sửa: SĐT sai định dạng",
@@ -3518,7 +3952,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-07 Sửa: email sai định dạng",
@@ -3547,7 +3984,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-08 Sửa: email trùng khách hàng khác",
@@ -3576,7 +4016,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-09 Sửa thông tin hợp lệ",
@@ -3608,7 +4051,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-10 Không xóa được khách đã có đơn hàng",
@@ -3628,7 +4074,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLKH-11 Xóa khách hàng không tồn tại",
@@ -3648,7 +4097,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -3677,7 +4129,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-02 Thêm: thiếu thông tin bắt buộc",
@@ -3706,7 +4161,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-03 Thêm: trùng mã sản phẩm",
@@ -3735,7 +4193,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-04 Thêm: đường dẫn ảnh không hợp lệ",
@@ -3764,7 +4225,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-05 Thêm: định dạng ảnh không hỗ trợ",
@@ -3793,7 +4257,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-06 Thêm: giá bán âm",
@@ -3822,7 +4289,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-07 Thêm: số lượng tồn âm",
@@ -3851,7 +4321,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-07b Thêm: mã có dấu cách và ký tự đặc biệt",
@@ -3880,7 +4353,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-07c Thêm: mã quá 50 ký tự",
@@ -3909,7 +4385,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-07d Thêm: tên quá 200 ký tự",
@@ -3938,7 +4417,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-07e Thêm: trọng lượng quá 10 ký tự",
@@ -3967,7 +4449,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-07f Thêm: danh mục không tồn tại",
@@ -3996,7 +4481,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-08 Thêm sản phẩm hợp lệ",
@@ -4032,7 +4520,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-09 Sửa giá bán",
@@ -4063,7 +4554,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-09b Sửa: giá bán âm",
@@ -4092,7 +4586,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-10 Sửa: ảnh không hợp lệ",
@@ -4121,7 +4618,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-11 Sửa: thiếu mã sản phẩm",
@@ -4150,7 +4650,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-11b Sửa: để trống tên sản phẩm",
@@ -4179,7 +4682,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-11c Sửa: sản phẩm không tồn tại",
@@ -4208,7 +4714,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-12 Xóa: thiếu mã sản phẩm",
@@ -4228,7 +4737,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-13 Xóa sản phẩm không tồn tại",
@@ -4248,7 +4760,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QLSP-14 Xóa sản phẩm chưa có giao dịch (xóa hẳn)",
@@ -4271,7 +4786,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Dọn dẹp: xóa sản phẩm giá âm (nếu đã bị tạo)",
@@ -4290,7 +4808,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Dọn dẹp: xóa sản phẩm tồn âm (nếu đã bị tạo)",
@@ -4309,7 +4830,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -4349,7 +4873,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-02 Từ khóa tìm kiếm không hợp lệ",
@@ -4369,7 +4896,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-03 Thêm: bỏ trống tên",
@@ -4398,7 +4928,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-04 Thêm: SĐT sai định dạng",
@@ -4427,7 +4960,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-05 Thêm: bỏ trống địa chỉ",
@@ -4456,7 +4992,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-06 Thêm: email sai định dạng",
@@ -4485,7 +5024,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-07 Thêm: mã số thuế sai",
@@ -4514,7 +5056,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-08 Thêm nhà cung cấp hợp lệ",
@@ -4549,7 +5094,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-09 Thêm: trùng SĐT / mã số thuế",
@@ -4578,7 +5126,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-10 Sửa: trạng thái không hợp lệ",
@@ -4607,7 +5158,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-11 Sửa: nhà cung cấp không tồn tại",
@@ -4636,7 +5190,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-12 Sửa thông tin hợp lệ",
@@ -4665,7 +5222,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-13 Không xóa được NCC còn công nợ",
@@ -4685,7 +5245,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-14 Xóa NCC chưa có phiếu nhập (xóa hẳn)",
@@ -4705,7 +5268,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NCC-15 Xóa nhà cung cấp không tồn tại",
@@ -4725,7 +5291,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -4752,7 +5321,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-02 Khoảng ngày lọc không hợp lệ",
@@ -4772,7 +5344,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-03 Lập phiếu: loại phiếu không hợp lệ",
@@ -4801,7 +5376,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-04 Phiếu nhập: chưa chọn nhà cung cấp",
@@ -4830,7 +5408,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-05 Phiếu nhập: chưa chọn sản phẩm",
@@ -4859,7 +5440,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-06 Phiếu nhập: số lượng bằng 0",
@@ -4888,7 +5472,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-07 Phiếu nhập: đơn giá bằng 0",
@@ -4917,7 +5504,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-08 Phiếu nhập: đã thanh toán lớn hơn tổng tiền",
@@ -4946,7 +5536,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-09 Phiếu nhập: NCC đã ngừng hợp tác",
@@ -4975,7 +5568,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-10 Phiếu nhập: sản phẩm không tồn tại",
@@ -5004,7 +5600,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-11 Phiếu xuất: nghiệp vụ không hợp lệ",
@@ -5033,7 +5632,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-12 Phiếu xuất trả NCC: chưa chọn NCC",
@@ -5062,7 +5664,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-13 Phiếu xuất: vượt tồn kho",
@@ -5091,7 +5696,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-14 Lập phiếu nhập hợp lệ (trả trước 50.000đ)",
@@ -5126,7 +5734,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-15 Nhập kho làm tăng tồn",
@@ -5150,7 +5761,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-16 Xem chi tiết phiếu nhập",
@@ -5175,7 +5789,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-17 Xem phiếu không tồn tại",
@@ -5195,7 +5812,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-18 Thanh toán công nợ: số tiền bằng 0",
@@ -5224,7 +5844,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-19 Thanh toán công nợ: vượt số còn nợ",
@@ -5253,7 +5876,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-20 Thanh toán hết công nợ phiếu nhập",
@@ -5285,7 +5911,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-21 Thanh toán phiếu đã trả đủ",
@@ -5314,7 +5943,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-22 Lô hàng tự ghi nhận từ phiếu nhập",
@@ -5340,7 +5972,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-23 Không sửa số lượng lô thuộc phiếu nhập",
@@ -5369,7 +6004,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-24 Không xóa lô thuộc phiếu nhập",
@@ -5389,7 +6027,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-25 Lập phiếu xuất bảo hành hợp lệ",
@@ -5423,7 +6064,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-26 Xuất kho làm giảm tồn",
@@ -5447,7 +6091,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-27 Phiếu xuất không có công nợ để thanh toán",
@@ -5476,7 +6123,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-28 Hủy phiếu: bỏ trống lý do",
@@ -5505,7 +6155,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-29 Hủy phiếu xuất",
@@ -5534,7 +6187,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-30 Hủy phiếu xuất hoàn lại tồn",
@@ -5558,7 +6214,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-31 Hủy lại phiếu đã hủy",
@@ -5587,7 +6246,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-32 Hủy phiếu nhập",
@@ -5616,7 +6278,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-33 Hủy phiếu nhập trừ lại tồn",
@@ -5640,7 +6305,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-34 Hủy phiếu nhập xóa lô hàng tương ứng",
@@ -5662,7 +6330,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-35 Thanh toán phiếu nhập đã hủy",
@@ -5691,7 +6362,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "KHO-36 Hủy phiếu không tồn tại",
@@ -5720,7 +6394,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-01 Thêm lô: chưa chọn sản phẩm",
@@ -5749,7 +6426,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-02 Thêm lô: bỏ trống vị trí kho",
@@ -5778,7 +6458,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-03 Thêm lô: bỏ trống số lượng",
@@ -5807,7 +6490,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-04 Thêm lô: số lượng bằng 0",
@@ -5836,7 +6522,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-05 Thêm lô: đơn giá âm",
@@ -5865,7 +6554,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-06 Thêm lô: ghi chú giả số phiếu nhập",
@@ -5894,7 +6586,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-07 Thêm lô: hạn sử dụng sai",
@@ -5923,7 +6618,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-08 Thêm lô: sản phẩm không tồn tại",
@@ -5952,7 +6650,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-09 Thêm lô tồn đầu kỳ hợp lệ",
@@ -5982,7 +6683,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-10 Thêm lô làm tăng tồn",
@@ -6006,7 +6710,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-11 Thêm lô trùng sản phẩm và vị trí",
@@ -6035,7 +6742,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-12 Sửa lô: thiếu mã",
@@ -6064,7 +6774,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-13 Sửa lô không tồn tại",
@@ -6093,7 +6806,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-14 Sửa số lượng lô",
@@ -6122,7 +6838,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-15 Sửa lô cập nhật tồn kho",
@@ -6146,7 +6865,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-16 Xóa lô thêm tay",
@@ -6166,7 +6888,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-17 Xóa lô trừ lại tồn",
@@ -6190,7 +6915,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "HHK-18 Xóa lô không tồn tại",
@@ -6210,7 +6938,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -6258,7 +6989,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC02 Thêm voucher giảm phần trăm hợp lệ",
@@ -6298,7 +7032,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC03 Mã voucher chữ thường được lưu in hoa",
@@ -6332,7 +7069,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC04 Giá trị biên hợp lệ (100%, 0, SL 1, bắt đầu = hiện tại)",
@@ -6384,7 +7124,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC06 Mã voucher đã tồn tại",
@@ -6413,7 +7156,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC07 Bỏ trống mã voucher",
@@ -6442,7 +7188,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC08 Bỏ trống mức giảm",
@@ -6471,7 +7220,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC09 Mức giảm bằng 0",
@@ -6500,7 +7252,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC10 Mức giảm là số âm",
@@ -6529,7 +7284,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC11 Phần trăm giảm vượt 100%",
@@ -6558,7 +7316,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC13 Đơn tối thiểu là số âm",
@@ -6587,7 +7348,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC14 Giảm tối đa là số âm",
@@ -6616,7 +7380,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC15a Tổng số lượng phát hành bằng 0",
@@ -6645,7 +7412,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC15b Tổng số lượng phát hành là số âm",
@@ -6674,7 +7444,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC16 Thời gian bắt đầu ở quá khứ",
@@ -6703,7 +7476,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC17 Kết thúc bằng bắt đầu",
@@ -6732,7 +7508,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC18 Kết thúc trước bắt đầu",
@@ -6761,7 +7540,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC19 Bỏ trống thời gian bắt đầu và kết thúc",
@@ -6790,7 +7572,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC20 Mã voucher dài hơn 50 ký tự",
@@ -6819,7 +7604,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TC23 Chưa đăng nhập không được thêm voucher",
@@ -6829,6 +7617,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
               }
             ],
             "body": {
@@ -6875,7 +7668,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-02 Tìm kiếm: khoảng ngày không hợp lệ",
@@ -6895,7 +7691,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-03 Sửa voucher chưa có đơn: đổi mức giảm",
@@ -6928,7 +7727,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-04 Sửa: mức giảm bằng 0",
@@ -6957,7 +7759,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-04b Sửa: ngày kết thúc trước ngày bắt đầu",
@@ -6986,7 +7791,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-04c Sửa: đổi sang giảm % nhưng giữ mức 50.000",
@@ -7015,7 +7823,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-04d Sửa: trạng thái không hợp lệ",
@@ -7044,7 +7855,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-04e Sửa: loại giảm giá không hợp lệ",
@@ -7073,7 +7887,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-04f Sửa: voucher không tồn tại",
@@ -7102,7 +7919,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-04g Xóa: voucher không tồn tại",
@@ -7122,7 +7942,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-04h Thêm: loại giảm giá không hợp lệ",
@@ -7151,7 +7974,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-05 Vô hiệu hóa voucher",
@@ -7182,7 +8008,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-06 Lọc voucher đã vô hiệu hóa",
@@ -7206,7 +8035,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "VCQ-07 Khách không dùng được voucher đã vô hiệu hóa",
@@ -7235,7 +8067,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Dọn dẹp: xóa voucher thử 1/6",
@@ -7257,7 +8092,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Dọn dẹp: xóa voucher thử 2/6",
@@ -7279,7 +8117,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Dọn dẹp: xóa voucher thử 3/6",
@@ -7301,7 +8142,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Dọn dẹp: xóa voucher thử 4/6",
@@ -7323,7 +8167,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Dọn dẹp: xóa voucher thử 5/6",
@@ -7345,7 +8192,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Dọn dẹp: xóa voucher thử 6/6",
@@ -7367,7 +8217,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -7395,7 +8248,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-02 Từ khóa tìm kiếm không hợp lệ",
@@ -7415,7 +8271,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-03 Thêm: bỏ trống họ tên",
@@ -7444,7 +8303,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-04 Thêm: bỏ trống SĐT",
@@ -7473,7 +8335,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-05 Thêm: SĐT sai định dạng",
@@ -7502,7 +8367,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-06 Thêm: email sai định dạng",
@@ -7531,7 +8399,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-07 Thêm: lương cơ bản âm",
@@ -7560,7 +8431,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-08 Thêm: lương có số lẻ",
@@ -7589,7 +8463,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-09 Thêm: lương không phải số",
@@ -7618,7 +8495,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-10 Thêm: phụ cấp âm",
@@ -7647,7 +8527,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-11 Thêm nhân viên hợp lệ (không cấp tài khoản)",
@@ -7682,7 +8565,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-12 Thêm: trùng SĐT nhân viên khác",
@@ -7711,7 +8597,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-13 Sửa: thiếu mã nhân viên",
@@ -7740,7 +8629,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-14 Sửa: nhân viên không tồn tại",
@@ -7769,7 +8661,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-15 Sửa: trạng thái không hợp lệ",
@@ -7798,7 +8693,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-16 Sửa lương hợp lệ",
@@ -7826,7 +8724,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-01 Danh sách tài khoản",
@@ -7852,7 +8753,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-02 Thêm: bỏ trống tên đăng nhập",
@@ -7881,7 +8785,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-03 Thêm: bỏ trống mật khẩu",
@@ -7910,7 +8817,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-04 Thêm: chưa chọn phân quyền",
@@ -7939,7 +8849,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-05 Thêm: chưa chọn nhân viên",
@@ -7968,7 +8881,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-06 Thêm: tên đăng nhập có dấu cách",
@@ -7997,7 +8913,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-07 Thêm: mật khẩu dưới 6 ký tự",
@@ -8026,7 +8945,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-08 Thêm: vai trò không hợp lệ",
@@ -8055,7 +8977,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-09 Thêm: nhân viên không tồn tại",
@@ -8084,7 +9009,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-10 Thêm: tên đăng nhập đã tồn tại",
@@ -8113,7 +9041,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-11 Cấp tài khoản Nhân viên kho hợp lệ",
@@ -8148,7 +9079,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-12 Thêm: nhân viên đã có tài khoản",
@@ -8177,7 +9111,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-13 Đăng nhập bằng tài khoản vừa cấp",
@@ -8208,7 +9145,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-14 Tài khoản kho xem được hóa đơn kho",
@@ -8227,7 +9167,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-15 Tài khoản kho không quản lý được voucher",
@@ -8247,7 +9190,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Đăng nhập lại Admin",
@@ -8275,7 +9221,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-16 Sửa: vai trò không hợp lệ",
@@ -8304,7 +9253,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-17 Sửa: mật khẩu mới dưới 6 ký tự",
@@ -8333,7 +9285,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-18 Sửa: tài khoản không tồn tại",
@@ -8362,7 +9317,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-19 Khóa tài khoản",
@@ -8390,7 +9348,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-20 Tài khoản bị khóa không đăng nhập được",
@@ -8419,7 +9380,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-21 Xóa: thiếu mã tài khoản",
@@ -8439,7 +9403,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-22 Xóa tài khoản",
@@ -8458,7 +9425,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TK-23 Xóa tài khoản không tồn tại",
@@ -8478,7 +9448,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-17 Xóa: thiếu mã nhân viên",
@@ -8498,7 +9471,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-18 Xóa nhân viên chưa có lịch sử (xóa hẳn)",
@@ -8518,7 +9494,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "NV-19 Xóa nhân viên không tồn tại",
@@ -8538,7 +9517,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -8574,7 +9556,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-01 Bán hàng: xem đơn hàng",
@@ -8593,7 +9578,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-02 Bán hàng: xem khách hàng",
@@ -8612,7 +9600,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-03 Bán hàng: xem sản phẩm",
@@ -8631,7 +9622,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-04 Bán hàng: không vào hóa đơn kho",
@@ -8651,7 +9645,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-05 Bán hàng: không vào nhà cung cấp",
@@ -8671,7 +9668,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-06 Bán hàng: không vào voucher",
@@ -8691,7 +9691,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-07 Bán hàng: không vào nhân viên",
@@ -8711,7 +9714,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-08 Bán hàng: không vào tài khoản",
@@ -8731,7 +9737,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-09 Bán hàng: không xem thống kê",
@@ -8751,7 +9760,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Đăng nhập Nhân viên kho",
@@ -8782,7 +9794,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-10 Kho: xem hóa đơn kho",
@@ -8801,7 +9816,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-11 Kho: xem hàng hóa kho",
@@ -8820,7 +9838,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-12 Kho: xem sản phẩm",
@@ -8839,7 +9860,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-13 Kho: xem danh sách NCC để lập phiếu",
@@ -8858,7 +9882,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-14 Kho: không thêm được nhà cung cấp",
@@ -8887,7 +9914,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-15 Kho: không vào đơn hàng",
@@ -8907,7 +9937,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-16 Kho: không vào khách hàng",
@@ -8927,7 +9960,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-17 Kho: không xem thống kê",
@@ -8947,13 +9983,22 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "PQ-18 Chưa đăng nhập: không gọi được API quản trị",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/san-pham"
           },
           "event": [
@@ -8976,7 +10021,13 @@
           "name": "PQ-19 Chưa đăng nhập: không xem được phiên quản trị",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-No-Cookie",
+                "value": "1",
+                "description": "Gửi request không kèm phiên đăng nhập"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/auth/me"
           },
           "event": [
@@ -9021,7 +10072,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -9049,7 +10103,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TKE-02 Thống kê theo khoảng ngày",
@@ -9071,7 +10128,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TKE-03 Ngày không hợp lệ",
@@ -9091,7 +10151,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "TKE-04 Từ ngày lớn hơn đến ngày",
@@ -9111,7 +10174,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -9136,7 +10202,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Khách hàng đã xóa không đăng nhập được",
@@ -9164,7 +10233,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Tồn kho sản phẩm thử trở về như ban đầu",
@@ -9188,7 +10260,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-10 Đăng xuất quản trị",
@@ -9207,7 +10282,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "QT-11 Sau khi đăng xuất không gọi được API quản trị",
@@ -9226,7 +10304,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     }

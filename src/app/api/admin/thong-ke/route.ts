@@ -56,29 +56,35 @@ export async function GET(request: Request) {
     const range = from || to ? { ...(from && { gte: from }), ...(to && { lte: to }) } : undefined;
     const inRange = (d: Date) => (!from || d >= from) && (!to || d <= to);
 
-    const [orders, allDone, importInvoicesInRange, importDetails, allProducts, categories] = await Promise.all([
-      prisma.donHang.findMany({
+    // Chay lan luot (khong Promise.all): hosting dung chung gioi han so ket noi MySQL mo cung luc
+    const runInOrder = async <T extends readonly (() => Promise<unknown>)[]>(tasks: T) => {
+      const out: unknown[] = [];
+      for (const task of tasks) out.push(await task());
+      return out as { [K in keyof T]: Awaited<ReturnType<T[K]>> };
+    };
+    const [orders, allDone, importInvoicesInRange, importDetails, allProducts, categories] = await runInOrder([
+      () => prisma.donHang.findMany({
         where: range ? { NgayTao: range } : {},
         include: { ChiTietDonHangs: true, KhachHang: true },
         orderBy: { NgayTao: "asc" },
       }),
       // Toan bo don da giao (khong gioi han ky): lan ban cuoi cua san pham, don dau tien cua khach
-      prisma.donHang.findMany({
+      () => prisma.donHang.findMany({
         where: { TrangThai: ORDER_DONE },
         select: { MaKH: true, NgayTao: true, ChiTietDonHangs: { select: { MaSP: true } } },
       }),
-      prisma.hoaDonKho.findMany({
+      () => prisma.hoaDonKho.findMany({
         where: { LoaiPhieu: "NHAP", TrangThai: { not: INVOICE_CANCELLED }, ...(range && { NgayLap: range }) },
         select: { TongTien: true },
       }),
       // Gia von: lay tu moi phieu nhap chua huy (khong gioi han theo ky bao cao)
-      prisma.chiTietHoaDonKho.findMany({
+      () => prisma.chiTietHoaDonKho.findMany({
         where: { HoaDonKho: { LoaiPhieu: "NHAP", TrangThai: { not: INVOICE_CANCELLED } } },
         select: { MaSP: true, SoLuong: true, ThanhTien: true },
       }),
-      prisma.sanPham.findMany({ include: { DanhMuc: true }, orderBy: { MaSP: "asc" } }),
-      prisma.danhMuc.findMany({ orderBy: { TenDanhMuc: "asc" } }),
-    ]);
+      () => prisma.sanPham.findMany({ include: { DanhMuc: true }, orderBy: { MaSP: "asc" } }),
+      () => prisma.danhMuc.findMany({ orderBy: { TenDanhMuc: "asc" } }),
+    ] as const);
 
     // ---- Gia von binh quan gia quyen theo san pham ----
     const costAgg = new Map<string, { qty: number; amount: number }>();
