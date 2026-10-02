@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testcase Tìm kiếm nhân viên</title>
+<style>
+  :root { --ink:#111; --line:#444; --muted:#555; --head:#f2f2f2; --note:#fff7e6; --pass:#e8f5e9; --fail:#fdecea; --bg:#fff; }
+  body { background:var(--bg); color:var(--ink); font-family:"Times New Roman", Times, serif; font-size:13pt; line-height:1.45; max-width:1100px; margin:0 auto; padding:24px 16px 60px; }
+  h1 { font-size:18pt; text-align:center; margin:0 0 4px; }
+  h3 { font-size:13pt; margin:18px 0 6px; font-style:italic; text-align:center; font-weight:normal; }
+  p.sub { text-align:center; color:var(--muted); margin:0 0 20px; }
+  .wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; margin:6px 0 14px; }
+  th, td { border:1px solid var(--line); padding:5px 7px; vertical-align:top; text-align:left; }
+  th { background:var(--head); text-align:center; }
+  td.k { width:22%; font-weight:bold; }
+  td.c { text-align:center; white-space:nowrap; }
+  td.pass { background:var(--pass); text-align:center; font-weight:bold; }
+  ul { margin:0; padding-left:20px; }
+  li { margin:1px 0; }
+  code { font-family:Consolas, monospace; font-size:11pt; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink:#e8e8e8; --line:#888; --muted:#aaa; --head:#2a2a2a; --note:#3a3220; --pass:#1f3a24; --fail:#4a2323; --bg:#161616; }
+  }
+  :root[data-theme="dark"] { --ink:#e8e8e8; --line:#888; --muted:#aaa; --head:#2a2a2a; --note:#3a3220; --pass:#1f3a24; --fail:#4a2323; --bg:#161616; }
+</style>
+</head>
+<body>
+
+<h1>KIỂM THỬ CHỨC NĂNG TÌM KIẾM NHÂN VIÊN</h1>
+<p class="sub">Phân hệ Quản lý nhân viên (FR-29, Bảng 3.33 Xem và tìm kiếm nhân viên) – Hệ thống FBShop</p>
+
+<h3>Bảng 4.x. Thông tin chung kiểm thử chức năng Tìm kiếm nhân viên</h3>
+<table>
+  <tr><td class="k">Chức năng</td><td>Xem và tìm kiếm nhân viên</td></tr>
+  <tr><td class="k">Tác nhân</td><td>Người quản lý (tài khoản vai trò Admin)</td></tr>
+  <tr><td class="k">Tiền điều kiện</td><td>Đăng nhập trang quản trị bằng tài khoản Admin (admin@gmail.com); mở <i>Quản lý nhân viên</i>.</td></tr>
+  <tr><td class="k">Cách thao tác</td><td>Nhập từ khóa vào ô “Tìm theo họ tên, số điện thoại, email, mã nhân viên...” → bấm <b>Tìm kiếm</b> (hoặc nhấn Enter).</td></tr>
+  <tr><td class="k">Quy tắc tìm kiếm</td><td>
+    <ul>
+      <li>Tìm gần đúng (chứa từ khóa) theo Mã nhân viên, Họ tên, Số điện thoại, Email (tên đăng nhập của tài khoản liên kết).</li>
+      <li>Không phân biệt chữ hoa/thường, bỏ khoảng trắng ở hai đầu từ khóa; để trống thì hiển thị toàn bộ nhân viên.</li>
+      <li>Từ khóa tối đa 100 ký tự, không chứa ký tự đặc biệt <code>&lt; &gt; { } [ ] \ ; ' " ` = % $ ^ * | ~</code>; vi phạm → báo “Từ khóa tìm kiếm không hợp lệ”.</li>
+      <li>Kết quả sắp xếp theo mã nhân viên, hiển thị kèm tài khoản liên kết, vai trò và trạng thái làm việc; phân trang 10 dòng/trang.</li>
+      <li>Chỉ Admin được dùng chức năng này.</li>
+    </ul>
+  </td></tr>
+  <tr><td class="k">Dữ liệu kiểm thử</td><td>
+    NV001 Nguyễn Văn Admin – 0901000001 – admin@gmail.com (Admin)<br>
+    NV002 Trần Thị Kho – 0901000002 – kho@gmail.com (Nhân viên kho)<br>
+    NV003 Lê Văn Bán Hàng – 0901000003 – banhang@gmail.com (Bán hàng)<br>
+    NV004 anh – 0123654888 – anh@gmail.com (Bán hàng)<br>
+    NV005 tminh – 0123456789 – minh@gmail.com (Bán hàng)
+  </td></tr>
+  <tr><td class="k">Môi trường</td><td>Trình duyệt Chrome/Edge; web FBShop trên hosting (http://cyanhio.id.vn:3999), CSDL MySQL. Ngày kiểm thử: 02/10/2026.</td></tr>
+</table>
+
+<h3>Bảng 4.y. Các trường hợp kiểm thử chức năng Tìm kiếm nhân viên</h3>
+<div class="wrap">
+<table>
+  <tr>
+    <th style="width:6%">Mã TC</th>
+    <th style="width:18%">Mô tả kịch bản</th>
+    <th style="width:17%">Dữ liệu đầu vào</th>
+    <th style="width:27%">Kết quả mong đợi</th>
+    <th style="width:22%">Kết quả thực tế</th>
+    <th style="width:10%">Đánh giá</th>
+  </tr>
+
+  <tr><td colspan="6"><b>A. Xem danh sách và tìm kiếm hợp lệ</b></td></tr>
+  <tr><td class="c">TC01</td><td>Xem danh sách khi chưa nhập từ khóa</td><td>Mở trang Quản lý nhân viên, ô tìm kiếm để trống</td>
+    <td>Hiển thị toàn bộ 5 nhân viên, sắp xếp theo mã NV001 → NV005</td><td>Hiển thị NV001, NV002, NV003, NV004, NV005</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC02</td><td>Tìm theo mã nhân viên đầy đủ</td><td>NV003</td>
+    <td>Hiển thị đúng 1 nhân viên NV003 – Lê Văn Bán Hàng</td><td>Hiển thị NV003</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC03</td><td>Tìm theo một phần mã nhân viên</td><td>NV00</td>
+    <td>Hiển thị tất cả nhân viên có mã chứa “NV00”</td><td>Hiển thị 5 nhân viên</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC04</td><td>Tìm theo họ tên đầy đủ (có dấu)</td><td>Trần Thị Kho</td>
+    <td>Hiển thị NV002 – Trần Thị Kho</td><td>Hiển thị NV002</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC05</td><td>Tìm theo một phần họ tên</td><td>Văn</td>
+    <td>Hiển thị các nhân viên có tên chứa “Văn”: NV001, NV003</td><td>Hiển thị NV001, NV003</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC06</td><td>Tìm không phân biệt chữ hoa/thường</td><td>TRẦN THỊ</td>
+    <td>Hiển thị NV002 – Trần Thị Kho</td><td>Hiển thị NV002</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC07</td><td>Tìm bằng tên gõ không dấu</td><td>tran thi kho</td>
+    <td>Hiển thị NV002 – Trần Thị Kho</td><td>Hiển thị NV002</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC08</td><td>Tìm theo số điện thoại đầy đủ</td><td>0901000002</td>
+    <td>Hiển thị NV002</td><td>Hiển thị NV002</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC09</td><td>Tìm theo một phần số điện thoại</td><td>090100</td>
+    <td>Hiển thị các nhân viên có SĐT chứa “090100”: NV001, NV002, NV003</td><td>Hiển thị NV001, NV002, NV003</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC10</td><td>Tìm theo email đầy đủ</td><td>banhang@gmail.com</td>
+    <td>Hiển thị NV003 (email là tên đăng nhập của tài khoản liên kết)</td><td>Hiển thị NV003</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC11</td><td>Tìm theo một phần email</td><td>kho@</td>
+    <td>Hiển thị NV002 – kho@gmail.com</td><td>Hiển thị NV002</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC12</td><td>Từ khóa có khoảng trắng ở hai đầu</td><td>“&nbsp;&nbsp;NV002&nbsp;&nbsp;”</td>
+    <td>Hệ thống bỏ khoảng trắng thừa, hiển thị NV002</td><td>Hiển thị NV002</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC13</td><td>Từ khóa chỉ gồm khoảng trắng</td><td>“&nbsp;&nbsp;&nbsp;”</td>
+    <td>Coi như không nhập từ khóa, hiển thị toàn bộ nhân viên</td><td>Hiển thị 5 nhân viên</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC14</td><td>Từ khóa dài đúng 100 ký tự (giá trị biên)</td><td>100 ký tự “a”</td>
+    <td>Từ khóa hợp lệ, hệ thống vẫn tìm; không có nhân viên phù hợp</td><td>Không báo lỗi, danh sách rỗng</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC15</td><td>Kết quả hiển thị đủ thông tin liên kết</td><td>NV002</td>
+    <td>Dòng NV002 hiển thị Email kho@gmail.com, tài khoản liên kết kho@gmail.com, vai trò Nhân viên kho, trạng thái Đang làm việc; không trả về mật khẩu</td>
+    <td>Đúng như mong đợi, không có trường mật khẩu</td><td class="pass">Đạt</td></tr>
+
+  <tr><td colspan="6"><b>B. Không tìm thấy và từ khóa không hợp lệ</b></td></tr>
+  <tr><td class="c">TC16</td><td>Không có nhân viên phù hợp</td><td>khongtontai</td>
+    <td>Bảng hiện “Không tìm thấy nhân viên phù hợp với "khongtontai"”</td><td>Danh sách rỗng, hiện đúng thông báo</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC17</td><td>Từ khóa chứa thẻ HTML</td><td>&lt;script&gt;</td>
+    <td>Báo “Từ khóa tìm kiếm không hợp lệ”, không thực hiện tìm kiếm</td><td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC18</td><td>Từ khóa chứa ký tự %</td><td>abc%</td>
+    <td>Báo “Từ khóa tìm kiếm không hợp lệ”</td><td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC19</td><td>Từ khóa chứa dấu nháy đơn</td><td>Văn'</td>
+    <td>Báo “Từ khóa tìm kiếm không hợp lệ”</td><td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC20</td><td>Từ khóa dài hơn 100 ký tự</td><td>101 ký tự “a”</td>
+    <td>Báo “Từ khóa tìm kiếm không hợp lệ”</td><td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+
+  <tr><td colspan="6"><b>C. Phân quyền</b></td></tr>
+  <tr><td class="c">TC21</td><td>Nhân viên kho tìm kiếm nhân viên</td><td>Đăng nhập kho@gmail.com, tìm “NV”</td>
+    <td>Không có menu Quản lý nhân viên; gõ thẳng đường dẫn /admin/nhan-vien thì bị chuyển về trang tổng quan; gọi chức năng tìm kiếm bị từ chối “Bạn không có quyền thực hiện thao tác này”</td><td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC22</td><td>Nhân viên bán hàng tìm kiếm nhân viên</td><td>Đăng nhập banhang@gmail.com, tìm “NV”</td>
+    <td>Bị từ chối “Bạn không có quyền thực hiện thao tác này”</td><td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+  <tr><td class="c">TC23</td><td>Chưa đăng nhập</td><td>Truy cập chức năng tìm kiếm khi chưa đăng nhập</td>
+    <td>Bị từ chối “Chưa đăng nhập hoặc phiên đã hết hạn”, chuyển về trang đăng nhập</td><td>Đúng như mong đợi</td><td class="pass">Đạt</td></tr>
+</table>
+</div>
+
+<h3>Bảng 4.z. Tổng hợp kết quả kiểm thử chức năng Tìm kiếm nhân viên</h3>
+<table>
+  <tr><th>Tổng số TC</th><th>Đạt</th><th>Không đạt</th><th>Tỉ lệ đạt</th></tr>
+  <tr><td class="c">23</td><td class="c">23</td><td class="c">0</td><td class="c">100%</td></tr>
+</table>
+
+</body>
+</html>

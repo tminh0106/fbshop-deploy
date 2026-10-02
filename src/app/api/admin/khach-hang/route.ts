@@ -38,11 +38,12 @@ function validate(body: Record<string, unknown>, partial: boolean) {
     if (!PHONE_REGEX.test(r.value)) return { error: PHONE_ERROR };
     data.SoDienThoai = r.value;
   }
+  // Email bat buoc giong luc khach dang ky (Bang 3.38 / FR-04)
   if (has("email")) {
-    const r = optionalText(body.email, "email", 100);
+    const r = requiredText(body.email, "email", 100);
     if (!r.ok) return { error: r.error };
-    const email = r.value?.toLowerCase() ?? null;
-    if (email && !EMAIL_REGEX.test(email)) return { error: EMAIL_ERROR };
+    const email = r.value.toLowerCase();
+    if (!EMAIL_REGEX.test(email)) return { error: EMAIL_ERROR };
     data.Email = email;
   }
   if (has("diaChi")) {

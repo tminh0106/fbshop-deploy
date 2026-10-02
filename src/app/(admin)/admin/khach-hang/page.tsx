@@ -162,7 +162,9 @@ export default function AdminKhachHangPage() {
       ? "Vui lòng nhập số điện thoại"
       : !PHONE_REGEX.test(newPhone.trim())
       ? PHONE_ERROR
-      : newEmail.trim() && !EMAIL_REGEX.test(newEmail.trim())
+      : !newEmail.trim()
+      ? "Vui lòng nhập email"
+      : !EMAIL_REGEX.test(newEmail.trim())
       ? EMAIL_ERROR
       : "";
     if (clientError) {
@@ -659,7 +661,9 @@ export default function AdminKhachHangPage() {
               </div>
 
               <div>
-                <label className="mb-1 block font-bold text-slate-700">Email (Tùy chọn)</label>
+                <label className="mb-1 block font-bold text-slate-700">
+                  Email <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="email"
                   placeholder="Ví dụ: khachhang@gmail.com"
