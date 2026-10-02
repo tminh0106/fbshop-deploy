@@ -294,6 +294,70 @@
           }
         },
         {
+          "name": "KH-06b Đăng ký: họ tên quá 100 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"soDienThoai\": \"{{custPhone}}\",\n  \"email\": \"kt{{runId}}@kiemthu.vn\",\n  \"diaChi\": \"12 Nguyễn Trãi, Thanh Xuân, Hà Nội\",\n  \"matKhau\": \"123456\",\n  \"xacNhanMatKhau\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Họ tên tối đa 100 ký tự\", () => pm.expect(pm.response.json().error).to.eql(\"Họ tên tối đa 100 ký tự\"));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "KH-06c Đăng ký: địa chỉ quá 255 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Khách Kiểm Thử\",\n  \"soDienThoai\": \"{{custPhone}}\",\n  \"email\": \"kt{{runId}}@kiemthu.vn\",\n  \"diaChi\": \"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\",\n  \"matKhau\": \"123456\",\n  \"xacNhanMatKhau\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Địa chỉ tối đa 255 ký tự\", () => pm.expect(pm.response.json().error).to.eql(\"Địa chỉ tối đa 255 ký tự\"));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
           "name": "KH-07 Đăng ký hợp lệ",
           "request": {
             "method": "POST",
@@ -659,7 +723,94 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Báo lỗi: Email không đúng định dạng\", () => pm.expect(pm.response.json().error).to.eql(\"Email không đúng định dạng\"));"
+                  "pm.test(\"Báo lỗi: Email không đúng định dạng (ví dụ hợp lệ: lienhe@fbshop.vn)\", () => pm.expect(pm.response.json().error).to.eql(\"Email không đúng định dạng (ví dụ hợp lệ: lienhe@fbshop.vn)\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "KH-19b Cập nhật thông tin: xóa trắng email",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Khách Kiểm Thử\",\n  \"email\": \"\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Email không được để trống\", () => pm.expect(pm.response.json().error).to.eql(\"Email không được để trống\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "KH-19c Cập nhật thông tin: họ tên quá 100 ký tự",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"email\": \"kt{{runId}}@kiemthu.vn\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Họ tên tối đa 100 ký tự\", () => pm.expect(pm.response.json().error).to.eql(\"Họ tên tối đa 100 ký tự\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "KH-19d Cập nhật thông tin: địa chỉ quá 255 ký tự",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Khách Kiểm Thử\",\n  \"email\": \"kt{{runId}}@kiemthu.vn\",\n  \"diaChi\": \"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Địa chỉ tối đa 255 ký tự\", () => pm.expect(pm.response.json().error).to.eql(\"Địa chỉ tối đa 255 ký tự\"));"
                 ]
               }
             }
@@ -1151,6 +1302,29 @@
                   "  pm.expect(res.page).to.eql(2);",
                   "  pm.expect(res.products.length).to.be.at.most(5);",
                   "  pm.expect(res.totalPages).to.eql(Math.ceil(res.total / 5));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SP-08b Tham số phân trang không hợp lệ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/san-pham?page=abc&limit=xyz"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Dùng giá trị mặc định: trang 1, 12 sản phẩm\", () => {",
+                  "  pm.expect(pm.response.json().page).to.eql(1);",
+                  "  pm.expect(pm.response.json().products.length).to.be.at.most(12);",
                   "});"
                 ]
               }
@@ -1691,6 +1865,64 @@
           ]
         },
         {
+          "name": "DH-05b Địa chỉ nhận hàng quá 255 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenNguoiNhan\": \"Khách Kiểm Thử\",\n  \"sdtNguoiNhan\": \"{{custPhone}}\",\n  \"diaChiNhan\": \"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\",\n  \"phuongThucThanhToan\": \"COD\",\n  \"ghiChu\": \"Đơn kiểm thử Postman\",\n  \"items\": [\n    {\n      \"maSP\": \"{{testSP}}\",\n      \"soLuong\": 1\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/don-hang"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Địa chỉ nhận hàng tối đa 255 ký tự\", () => pm.expect(pm.response.json().error).to.eql(\"Địa chỉ nhận hàng tối đa 255 ký tự\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DH-05c Ghi chú quá 400 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenNguoiNhan\": \"Khách Kiểm Thử\",\n  \"sdtNguoiNhan\": \"{{custPhone}}\",\n  \"diaChiNhan\": \"99 Nguyễn Trãi, Thanh Xuân, Hà Nội\",\n  \"phuongThucThanhToan\": \"COD\",\n  \"ghiChu\": \"GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG\",\n  \"items\": [\n    {\n      \"maSP\": \"{{testSP}}\",\n      \"soLuong\": 1\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/don-hang"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Ghi chú tối đa 400 ký tự\", () => pm.expect(pm.response.json().error).to.eql(\"Ghi chú tối đa 400 ký tự\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "DH-06 Giỏ hàng trống",
           "request": {
             "method": "POST",
@@ -2045,6 +2277,64 @@
           ]
         },
         {
+          "name": "DH-17b Mỗi khách chỉ dùng mã 1 lần: kiểm tra mã",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}CK\",\n  \"tongTienHang\": {{testPrice}}\n}"
+            },
+            "url": "{{baseUrl}}/api/voucher/check"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Bạn đã sử dụng mã giảm giá này rồi\", () => pm.expect(pm.response.json().error).to.eql(\"Bạn đã sử dụng mã giảm giá này rồi\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DH-17c Mỗi khách chỉ dùng mã 1 lần: đặt đơn thứ 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenNguoiNhan\": \"Khách Kiểm Thử\",\n  \"sdtNguoiNhan\": \"{{custPhone}}\",\n  \"diaChiNhan\": \"99 Nguyễn Trãi, Thanh Xuân, Hà Nội\",\n  \"phuongThucThanhToan\": \"COD\",\n  \"ghiChu\": \"Đơn kiểm thử Postman\",\n  \"items\": [\n    {\n      \"maSP\": \"{{testSP}}\",\n      \"soLuong\": 1\n    }\n  ],\n  \"maVoucher\": \"TCV{{runId}}CK\"\n}"
+            },
+            "url": "{{baseUrl}}/api/don-hang"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Bạn đã sử dụng mã giảm giá này rồi\", () => pm.expect(pm.response.json().error).to.eql(\"Bạn đã sử dụng mã giảm giá này rồi\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "DH-18 Xem danh sách đơn hàng của tôi",
           "request": {
             "method": "GET",
@@ -2214,6 +2504,37 @@
                   "pm.test(\"Mã HTTP 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"Voucher còn 5 lượt\", () => {",
                   "  pm.expect(pm.response.json().data[0].TongSoLuong).to.eql(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DH-24b Hủy đơn thì khách dùng lại được mã",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}CK\",\n  \"tongTienHang\": {{testPrice}}\n}"
+            },
+            "url": "{{baseUrl}}/api/voucher/check"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Mã hợp lệ trở lại\", () => {",
+                  "  pm.expect(pm.response.json().voucher.giamGia).to.eql(20000);",
                   "});"
                 ]
               }
@@ -2985,6 +3306,26 @@
               }
             }
           ]
+        },
+        {
+          "name": "QLDH-26 Xác nhận hoàn tiền đơn không tồn tại",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/don-hang/DH_KHONG_TON_TAI/hoan-tien"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Báo lỗi: Không tìm thấy đơn hàng\", () => pm.expect(pm.response.json().error).to.eql(\"Không tìm thấy đơn hàng\"));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -3513,6 +3854,151 @@
           ]
         },
         {
+          "name": "QLSP-07b Thêm: mã có dấu cách và ký tự đặc biệt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSP\": \"SP VOT/01?\",\n  \"tenSP\": \"Sản phẩm kiểm thử Postman\",\n  \"giaBan\": 199000,\n  \"soLuong\": 3,\n  \"trongLuong\": \"\",\n  \"hinhAnh\": \"/images/placeholder.png\",\n  \"moTa\": \"Tạo bởi bộ kiểm thử Postman\",\n  \"maDanhMuc\": \"{{testCategory}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/san-pham"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Mã sản phẩm tối đa 50 ký tự, chỉ gồm chữ không dấu, số, dấu gạch dưới (_) và gạch ngang (-)\", () => pm.expect(pm.response.json().error).to.eql(\"Mã sản phẩm tối đa 50 ký tự, chỉ gồm chữ không dấu, số, dấu gạch dưới (_) và gạch ngang (-)\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QLSP-07c Thêm: mã quá 50 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSP\": \"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS\",\n  \"tenSP\": \"Sản phẩm kiểm thử Postman\",\n  \"giaBan\": 199000,\n  \"soLuong\": 3,\n  \"trongLuong\": \"\",\n  \"hinhAnh\": \"/images/placeholder.png\",\n  \"moTa\": \"Tạo bởi bộ kiểm thử Postman\",\n  \"maDanhMuc\": \"{{testCategory}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/san-pham"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Mã sản phẩm tối đa 50 ký tự, chỉ gồm chữ không dấu, số, dấu gạch dưới (_) và gạch ngang (-)\", () => pm.expect(pm.response.json().error).to.eql(\"Mã sản phẩm tối đa 50 ký tự, chỉ gồm chữ không dấu, số, dấu gạch dưới (_) và gạch ngang (-)\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QLSP-07d Thêm: tên quá 200 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSP\": \"tsp{{runId}}\",\n  \"tenSP\": \"TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\",\n  \"giaBan\": 199000,\n  \"soLuong\": 3,\n  \"trongLuong\": \"\",\n  \"hinhAnh\": \"/images/placeholder.png\",\n  \"moTa\": \"Tạo bởi bộ kiểm thử Postman\",\n  \"maDanhMuc\": \"{{testCategory}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/san-pham"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Tên sản phẩm tối đa 200 ký tự\", () => pm.expect(pm.response.json().error).to.eql(\"Tên sản phẩm tối đa 200 ký tự\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QLSP-07e Thêm: trọng lượng quá 10 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSP\": \"tsp{{runId}}\",\n  \"tenSP\": \"Sản phẩm kiểm thử Postman\",\n  \"giaBan\": 199000,\n  \"soLuong\": 3,\n  \"trongLuong\": \"4U-83g-5U-x\",\n  \"hinhAnh\": \"/images/placeholder.png\",\n  \"moTa\": \"Tạo bởi bộ kiểm thử Postman\",\n  \"maDanhMuc\": \"{{testCategory}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/san-pham"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Trọng lượng tối đa 10 ký tự (ví dụ: 4U, 3U/4U)\", () => pm.expect(pm.response.json().error).to.eql(\"Trọng lượng tối đa 10 ký tự (ví dụ: 4U, 3U/4U)\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QLSP-07f Thêm: danh mục không tồn tại",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSP\": \"tsp{{runId}}\",\n  \"tenSP\": \"Sản phẩm kiểm thử Postman\",\n  \"giaBan\": 199000,\n  \"soLuong\": 3,\n  \"trongLuong\": \"\",\n  \"hinhAnh\": \"/images/placeholder.png\",\n  \"moTa\": \"Tạo bởi bộ kiểm thử Postman\",\n  \"maDanhMuc\": \"DM_KHONG_CO\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/san-pham"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Danh mục sản phẩm không tồn tại\", () => pm.expect(pm.response.json().error).to.eql(\"Danh mục sản phẩm không tồn tại\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "QLSP-08 Thêm sản phẩm hợp lệ",
           "request": {
             "method": "POST",
@@ -3661,6 +4147,64 @@
                 "exec": [
                   "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
                   "pm.test(\"Báo lỗi: Thiếu mã sản phẩm\", () => pm.expect(pm.response.json().error).to.eql(\"Thiếu mã sản phẩm\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QLSP-11b Sửa: để trống tên sản phẩm",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSP\": \"TSP{{runId}}\",\n  \"tenSP\": \"\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/san-pham"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Vui lòng nhập tên sản phẩm\", () => pm.expect(pm.response.json().error).to.eql(\"Vui lòng nhập tên sản phẩm\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QLSP-11c Sửa: sản phẩm không tồn tại",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSP\": \"SP_KHONG_TON_TAI\",\n  \"giaBan\": 1000\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/san-pham"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Báo lỗi: Sản phẩm không tồn tại hoặc đã bị xóa\", () => pm.expect(pm.response.json().error).to.eql(\"Sản phẩm không tồn tại hoặc đã bị xóa\"));"
                 ]
               }
             }
@@ -5288,7 +5832,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Báo lỗi: Số lượng và đơn giá nhập phải là số nguyên lớn hơn 0\", () => pm.expect(pm.response.json().error).to.eql(\"Số lượng và đơn giá nhập phải là số nguyên lớn hơn 0\"));"
+                  "pm.test(\"Báo lỗi: Số lượng (1 - 100.000) và đơn giá nhập phải là số nguyên lớn hơn 0\", () => pm.expect(pm.response.json().error).to.eql(\"Số lượng (1 - 100.000) và đơn giá nhập phải là số nguyên lớn hơn 0\"));"
                 ]
               }
             }
@@ -5317,7 +5861,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Báo lỗi: Số lượng và đơn giá nhập phải là số nguyên lớn hơn 0\", () => pm.expect(pm.response.json().error).to.eql(\"Số lượng và đơn giá nhập phải là số nguyên lớn hơn 0\"));"
+                  "pm.test(\"Báo lỗi: Số lượng (1 - 100.000) và đơn giá nhập phải là số nguyên lớn hơn 0\", () => pm.expect(pm.response.json().error).to.eql(\"Số lượng (1 - 100.000) và đơn giá nhập phải là số nguyên lớn hơn 0\"));"
                 ]
               }
             }
@@ -6410,6 +6954,200 @@
                 "exec": [
                   "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
                   "pm.test(\"Báo lỗi: Định dạng dữ liệu không hợp lệ: Mức giảm phải lớn hơn 0\", () => pm.expect(pm.response.json().error).to.eql(\"Định dạng dữ liệu không hợp lệ: Mức giảm phải lớn hơn 0\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "VCQ-04b Sửa: ngày kết thúc trước ngày bắt đầu",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}TIEN\",\n  \"ngayKetThuc\": \"{{yesterday}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Thời gian kết thúc phải sau thời gian bắt đầu\", () => pm.expect(pm.response.json().error).to.eql(\"Thời gian kết thúc phải sau thời gian bắt đầu\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "VCQ-04c Sửa: đổi sang giảm % nhưng giữ mức 50.000",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}TIEN\",\n  \"loaiGiamGia\": \"PHANTRAM\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%\", () => pm.expect(pm.response.json().error).to.eql(\"Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "VCQ-04d Sửa: trạng thái không hợp lệ",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}TIEN\",\n  \"trangThai\": \"abc\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Trạng thái voucher không hợp lệ\", () => pm.expect(pm.response.json().error).to.eql(\"Trạng thái voucher không hợp lệ\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "VCQ-04e Sửa: loại giảm giá không hợp lệ",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}TIEN\",\n  \"loaiGiamGia\": \"QUA_TANG\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Loại giảm giá không hợp lệ (chỉ nhận TIEN hoặc PHANTRAM)\", () => pm.expect(pm.response.json().error).to.eql(\"Loại giảm giá không hợp lệ (chỉ nhận TIEN hoặc PHANTRAM)\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "VCQ-04f Sửa: voucher không tồn tại",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"VOUCHER_KHONG_CO\",\n  \"tongSoLuong\": 5\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Báo lỗi: Voucher không tồn tại\", () => pm.expect(pm.response.json().error).to.eql(\"Voucher không tồn tại\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "VCQ-04g Xóa: voucher không tồn tại",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/voucher?maVoucher=VOUCHER_KHONG_CO"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Báo lỗi: Voucher không tồn tại\", () => pm.expect(pm.response.json().error).to.eql(\"Voucher không tồn tại\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "VCQ-04h Thêm: loại giảm giá không hợp lệ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maVoucher\": \"TCV{{runId}}X\",\n  \"loaiGiamGia\": \"QUA_TANG\",\n  \"giaTriGiam\": 5000,\n  \"donHangToiThieu\": 0,\n  \"mucGiamToiDa\": 0,\n  \"tongSoLuong\": 10,\n  \"gioiHanSuDung\": 1,\n  \"ngayBatDau\": \"{{tomorrow}}\",\n  \"ngayKetThuc\": \"{{in30d}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/voucher"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mã HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Báo lỗi: Loại giảm giá không hợp lệ (chỉ nhận TIEN hoặc PHANTRAM)\", () => pm.expect(pm.response.json().error).to.eql(\"Loại giảm giá không hợp lệ (chỉ nhận TIEN hoặc PHANTRAM)\"));"
                 ]
               }
             }

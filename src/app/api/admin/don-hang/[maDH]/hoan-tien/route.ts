@@ -17,6 +17,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ma
       data: { TrangThaiThanhToan: PAYMENT_STATUS.REFUNDED },
     });
     if (done.count === 0) {
+      const exists = await prisma.donHang.findUnique({ where: { MaDH: maDH }, select: { MaDH: true } });
+      if (!exists) return NextResponse.json({ error: "Không tìm thấy đơn hàng" }, { status: 404 });
       return NextResponse.json({ error: "Đơn hàng không ở trạng thái Chờ hoàn tiền" }, { status: 400 });
     }
     return NextResponse.json({ success: true, message: "Đã xác nhận hoàn tiền cho khách hàng" });

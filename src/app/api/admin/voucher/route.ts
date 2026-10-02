@@ -2,6 +2,21 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { requireFeature } from "@/lib/auth";
 
+const LOAI_GIAM_GIA = ["TIEN", "PHANTRAM"];
+const TRANG_THAI = ["Active", "Disabled"];
+const LOAI_ERROR = "Loại giảm giá không hợp lệ (chỉ nhận TIEN hoặc PHANTRAM)";
+const OVER_100 = "Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%";
+const END_BEFORE_START = "Thời gian kết thúc phải sau thời gian bắt đầu";
+const PAST_START = "Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại";
+const NOT_FOUND = "Voucher không tồn tại";
+
+// Phut hien tai (form chon den phut)
+const currentMinute = () => {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  return d;
+};
+
 // GET: Danh sach voucher (Ho tro tim kiem va loc theo dac ta)
 export async function GET(request: Request) {
   try {
@@ -117,6 +132,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const loai = String(loaiGiamGia).toUpperCase();
+    if (!LOAI_GIAM_GIA.includes(loai)) {
+      return NextResponse.json({ error: LOAI_ERROR }, { status: 400 });
+    }
+
     const numGiaTri = Number(giaTriGiam);
     const numDonHangToiThieu = Number(donHangToiThieu) || 0;
     const numMucGiamToiDa = Number(mucGiamToiDa) || 0;
@@ -126,37 +146,32 @@ export async function POST(request: Request) {
         ? 100
         : Number(tongSoLuong);
 
-    if (numGiaTri <= 0 || numDonHangToiThieu < 0 || numMucGiamToiDa < 0 || numTongSoLuong <= 0) {
+    // So khong hop le (chu, so le o so luong) cung bao loi thay vi loi he thong
+    const badNumber =
+      !Number.isFinite(numGiaTri) || !Number.isFinite(numDonHangToiThieu) || !Number.isFinite(numMucGiamToiDa) || !Number.isInteger(numTongSoLuong);
+    if (badNumber || numGiaTri <= 0 || numDonHangToiThieu < 0 || numMucGiamToiDa < 0 || numTongSoLuong <= 0) {
       return NextResponse.json(
         { error: "Định dạng dữ liệu không hợp lệ: Số lượng và giá trị không được là số âm hoặc bằng 0" },
         { status: 400 }
       );
     }
 
-    if (loaiGiamGia.toUpperCase() === "PHANTRAM" && numGiaTri > 100) {
-      return NextResponse.json(
-        { error: "Định dạng dữ liệu không hợp lệ: Phần trăm giảm không được vượt quá 100%" },
-        { status: 400 }
-      );
+    if (loai === "PHANTRAM" && numGiaTri > 100) {
+      return NextResponse.json({ error: OVER_100 }, { status: 400 });
     }
 
     const start = new Date(ngayBatDau);
     const end = new Date(ngayKetThuc);
-    const currentMinute = new Date();
-    currentMinute.setSeconds(0, 0);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return NextResponse.json({ error: "Thời gian không hợp lệ" }, { status: 400 });
+    }
 
-    if (start.getTime() < currentMinute.getTime()) {
-      return NextResponse.json(
-        { error: "Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại" },
-        { status: 400 }
-      );
+    if (start.getTime() < currentMinute().getTime()) {
+      return NextResponse.json({ error: PAST_START }, { status: 400 });
     }
 
     if (end <= start) {
-      return NextResponse.json(
-        { error: "Thời gian kết thúc phải sau thời gian bắt đầu" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: END_BEFORE_START }, { status: 400 });
     }
 
     const existing = await prisma.voucher.findUnique({
@@ -169,7 +184,7 @@ export async function POST(request: Request) {
     const newVoucher = await prisma.voucher.create({
       data: {
         MaVoucher: maVoucher.trim().toUpperCase(),
-        LoaiGiamGia: loaiGiamGia,
+        LoaiGiamGia: loai,
         GiaTriGiam: numGiaTri,
         DonHangToiThieu: numDonHangToiThieu,
         MucGiamToiDa: numMucGiamToiDa,
@@ -213,6 +228,24 @@ export async function PUT(request: Request) {
 
     if (!maVoucher) {
       return NextResponse.json({ error: "Thiếu mã voucher" }, { status: 400 });
+    }
+
+    const current = await prisma.voucher.findUnique({ where: { MaVoucher: maVoucher } });
+    if (!current) {
+      return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
+    }
+
+    // Loai / trang thai: chi nhan gia tri chuan (giu nguyen gia tri cu cua du lieu cu thi van cho qua)
+    if (loaiGiamGia !== undefined && loaiGiamGia !== current.LoaiGiamGia && !LOAI_GIAM_GIA.includes(loaiGiamGia)) {
+      return NextResponse.json({ error: LOAI_ERROR }, { status: 400 });
+    }
+    if (trangThai !== undefined && trangThai !== "" && trangThai !== current.TrangThai && !TRANG_THAI.includes(trangThai)) {
+      return NextResponse.json({ error: "Trạng thái voucher không hợp lệ" }, { status: 400 });
+    }
+
+    const isNum = (v: unknown) => v === undefined || Number.isFinite(Number(v));
+    if (!isNum(giaTriGiam) || !isNum(donHangToiThieu) || !isNum(mucGiamToiDa) || (tongSoLuong !== undefined && !Number.isInteger(Number(tongSoLuong)))) {
+      return NextResponse.json({ error: "Định dạng dữ liệu không hợp lệ: Giá trị phải là số" }, { status: 400 });
     }
 
     if (giaTriGiam !== undefined && Number(giaTriGiam) <= 0) {
@@ -274,6 +307,24 @@ export async function PUT(request: Request) {
       if (trangThai) updateData.TrangThai = trangThai;
     }
 
+    // Kiem tra tren gia tri SAU KHI SUA (truong khong gui giu gia tri cu)
+    const loaiMoi = String(updateData.LoaiGiamGia ?? current.LoaiGiamGia).toUpperCase();
+    const giaTriMoi = Number(updateData.GiaTriGiam ?? current.GiaTriGiam);
+    if (loaiMoi === "PHANTRAM" && giaTriMoi > 100) {
+      return NextResponse.json({ error: OVER_100 }, { status: 400 });
+    }
+    const startMoi: Date = updateData.NgayBatDau ?? current.NgayBatDau;
+    const endMoi: Date = updateData.NgayKetThuc ?? current.NgayKetThuc;
+    if (Number.isNaN(startMoi.getTime()) || Number.isNaN(endMoi.getTime())) {
+      return NextResponse.json({ error: "Thời gian không hợp lệ" }, { status: 400 });
+    }
+    if (updateData.NgayBatDau && startMoi.getTime() !== current.NgayBatDau.getTime() && startMoi < currentMinute()) {
+      return NextResponse.json({ error: PAST_START }, { status: 400 });
+    }
+    if (endMoi <= startMoi) {
+      return NextResponse.json({ error: END_BEFORE_START }, { status: 400 });
+    }
+
     const updated = await prisma.voucher.update({
       where: { MaVoucher: maVoucher },
       data: updateData,
@@ -306,6 +357,11 @@ export async function DELETE(request: Request) {
 
     if (!maVoucher) {
       return NextResponse.json({ error: "Thiếu mã voucher cần xóa" }, { status: 400 });
+    }
+
+    const exists = await prisma.voucher.findUnique({ where: { MaVoucher: maVoucher }, select: { MaVoucher: true } });
+    if (!exists) {
+      return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
     }
 
     const usedCount = await prisma.donHang.count({

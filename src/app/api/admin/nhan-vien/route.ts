@@ -19,6 +19,7 @@ const ACCOUNT_LOCKED = "Khoa";
 // Gioi han theo cot CSDL (HoTen VarChar(100), DiaChi VarChar(255), Luong Decimal(15,0))
 const MAX_NAME = 100;
 const MAX_ADDRESS = 255;
+const MAX_EMAIL = 100;
 const MAX_MONEY = 999_999_999_999;
 
 const DUPLICATE_ERROR = "Thông tin đã tồn tại";
@@ -132,6 +133,8 @@ export async function POST(request: Request) {
     let cleanEmail: string | null = null;
     if (email && typeof email === "string" && email.trim()) {
       cleanEmail = email.trim().toLowerCase();
+      // Email la ten dang nhap cua tai khoan (cot VarChar 100)
+      if (cleanEmail.length > MAX_EMAIL) return bad(`Email tối đa ${MAX_EMAIL} ký tự`);
       if (!EMAIL_REGEX.test(cleanEmail)) {
         return bad("Email không đúng định dạng. Vui lòng kiểm tra lại cấu trúc email (ví dụ: nhanvien@fbshop.vn).");
       }
@@ -258,6 +261,7 @@ export async function PUT(request: Request) {
       }
       if (emailStr) {
         cleanEmail = emailStr.toLowerCase();
+        if (cleanEmail.length > MAX_EMAIL) return bad(`Email tối đa ${MAX_EMAIL} ký tự`);
         if (!EMAIL_REGEX.test(cleanEmail)) {
           return bad("Email không đúng định dạng. Vui lòng kiểm tra lại cấu trúc email (ví dụ: nhanvien@fbshop.vn).");
         }

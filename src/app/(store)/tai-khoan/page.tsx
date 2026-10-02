@@ -50,6 +50,10 @@ export default function AccountPage() {
       toast.error("Họ tên không được để trống");
       return;
     }
+    if (!email.trim()) {
+      toast.error("Email không được để trống");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -58,8 +62,8 @@ export default function AccountPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           hoTen: hoTen.trim(),
-          email: email.trim() || undefined,
-          diaChi: diaChi.trim() || undefined,
+          email: email.trim(),
+          diaChi: diaChi.trim(),
         }),
       });
 
@@ -167,6 +171,7 @@ export default function AccountPage() {
                   <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
+                    maxLength={100}
                     value={hoTen}
                     onChange={(e) => setHoTen(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
@@ -194,13 +199,14 @@ export default function AccountPage() {
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Địa chỉ Email
+                  Địa chỉ Email <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="email"
                     placeholder="name@example.com"
+                    maxLength={100}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"
@@ -217,6 +223,7 @@ export default function AccountPage() {
                   <textarea
                     rows={3}
                     placeholder="Nhập địa chỉ nhận hàng của bạn..."
+                    maxLength={255}
                     value={diaChi}
                     onChange={(e) => setDiaChi(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-2 focus:ring-orange-100"

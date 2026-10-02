@@ -15,7 +15,7 @@ import { checkKeyword, optionalText, parseIntInRange, requiredText } from "@/lib
 const MAX_QTY = 100_000;
 const MAX_PRICE = 999_999_999_999;
 const DEFAULT_LOCATION = "KHO_CHINH";
-const INVALID_NUMBER = "Số lượng và đơn giá nhập phải là số nguyên lớn hơn 0";
+const INVALID_NUMBER = "Số lượng (1 - 100.000) và đơn giá nhập phải là số nguyên lớn hơn 0";
 const DUPLICATE = "Hàng hóa/Lô hàng đã tồn tại trong kho";
 const HAS_HISTORY =
   "Không thể xóa hàng hóa đã phát sinh lịch sử xuất/nhập kho. Vui lòng thực hiện phiếu xuất hủy hoặc hủy hóa đơn nhập tương ứng.";

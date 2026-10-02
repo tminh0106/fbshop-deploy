@@ -4,10 +4,13 @@ import { Prisma } from "@prisma/client";
 import { getCurrentCustomer } from "@/lib/auth";
 import { ORDER_STATUS, PAYMENT_STATUS, canCustomerCancel } from "@/lib/orderStatus";
 import { cancelExpiredUnpaidOrders, paymentDeadline } from "@/lib/orderExpiry";
+import { VOUCHER_USED_ERROR, voucherLimitPerCustomer, voucherUsesByCustomer } from "@/lib/voucherUsage";
 
 // Phuong thuc thanh toan trang dat hang gui len (COD / chuyen khoan QR)
 const PAYMENT_METHODS = ["COD", "BANKING"];
 const MAX_QTY_PER_ITEM = 999;
+// Ghi chu don hang: cot GhiChu VarChar(500), chua ~100 ky tu cho ghi chu he thong khi khach huy don
+const MAX_NOTE = 400;
 const STOPPED_TAG = "[NGỪNG KINH DOANH]";
 // Phi van chuyen: mien phi tu 1.000.000d tien hang (khop voi trang dat hang)
 const FREE_SHIP_FROM = 1_000_000;
@@ -22,6 +25,9 @@ class OutOfStockError extends Error {
 
 // Voucher vua het luot giua luc kiem tra va luc tru luot (nhieu khach dung ma cuoi cung luc)
 class VoucherExhaustedError extends Error {}
+
+// Khach da dung het so lan duoc phep cua ma (GioiHanSuDung)
+class VoucherUsedError extends Error {}
 
 // MySQL huy 1 trong 2 giao dich ghi cung luc (deadlock / write conflict - P2034): thu lai.
 // Lan thu lai doc du lieu moi nen se bao dung "het hang" / "het luot voucher" neu co.
@@ -148,6 +154,12 @@ export async function POST(request: Request) {
     if (!diaChiNhan || !diaChiNhan.trim()) {
       return NextResponse.json({ error: "Vui lòng nhập địa chỉ nhận hàng" }, { status: 400 });
     }
+    if (diaChiNhan.trim().length > 255) {
+      return NextResponse.json({ error: "Địa chỉ nhận hàng tối đa 255 ký tự" }, { status: 400 });
+    }
+    if (typeof ghiChu === "string" && ghiChu.trim().length > MAX_NOTE) {
+      return NextResponse.json({ error: `Ghi chú tối đa ${MAX_NOTE} ký tự` }, { status: 400 });
+    }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Giỏ hàng không có sản phẩm nào" }, { status: 400 });
@@ -240,6 +252,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Mã giảm giá đã hết lượt sử dụng" }, { status: 400 });
       }
 
+      const usedByCustomer = await voucherUsesByCustomer(prisma, customer.MaKH, validVoucher.MaVoucher);
+      if (usedByCustomer >= voucherLimitPerCustomer(validVoucher.GioiHanSuDung)) {
+        return NextResponse.json({ error: VOUCHER_USED_ERROR }, { status: 400 });
+      }
+
       const minOrder = Number(validVoucher.DonHangToiThieu);
       if (tongTienHang < minOrder) {
         return NextResponse.json(
@@ -330,6 +347,10 @@ export async function POST(request: Request) {
           data: { TongSoLuong: { decrement: 1 } },
         });
         if (used.count === 0) throw new VoucherExhaustedError();
+
+        // Khach dat 2 don cung luc voi cung 1 ma: dem lai trong giao dich (da tinh ca don vua tao)
+        const uses = await voucherUsesByCustomer(tx, customer.MaKH, validVoucher.MaVoucher);
+        if (uses > voucherLimitPerCustomer(validVoucher.GioiHanSuDung)) throw new VoucherUsedError();
       }
 
       return newOrder;
@@ -352,6 +373,9 @@ export async function POST(request: Request) {
         { error: "Mã giảm giá vừa hết lượt sử dụng. Vui lòng bỏ mã và đặt hàng lại." },
         { status: 409 }
       );
+    }
+    if (error instanceof VoucherUsedError) {
+      return NextResponse.json({ error: VOUCHER_USED_ERROR }, { status: 400 });
     }
     if (error instanceof OutOfStockError) {
       return NextResponse.json(

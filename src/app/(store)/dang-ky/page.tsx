@@ -119,6 +119,7 @@ function RegisterForm() {
               <input
                 type="text"
                 placeholder="Ví dụ: Nguyễn Văn A"
+                maxLength={100}
                 value={hoTen}
                 onChange={(e) => setHoTen(e.target.value)}
                 className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
@@ -165,6 +166,7 @@ function RegisterForm() {
                   type="email"
                   autoComplete="email"
                   placeholder="name@gmail.com"
+                  maxLength={100}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={`w-full rounded-xl border h-11 pl-10 pr-4 text-sm outline-none transition-all ${
@@ -187,6 +189,7 @@ function RegisterForm() {
               <textarea
                 rows={2}
                 placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..."
+                maxLength={255}
                 value={diaChi}
                 onChange={(e) => setDiaChi(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 h-11 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315] focus:ring-4 focus:ring-orange-100"

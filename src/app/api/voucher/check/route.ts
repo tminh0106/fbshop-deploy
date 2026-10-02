@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getCurrentCustomer } from "@/lib/auth";
+import { VOUCHER_USED_ERROR, voucherLimitPerCustomer, voucherUsesByCustomer } from "@/lib/voucherUsage";
 
 export async function POST(request: Request) {
   try {
@@ -36,6 +38,15 @@ export async function POST(request: Request) {
     // Kiem tra so luong
     if (voucher.TongSoLuong <= 0) {
       return NextResponse.json({ error: "Mã giảm giá đã hết lượt sử dụng" }, { status: 400 });
+    }
+
+    // Khach da dang nhap: bao som neu da dung ma nay (khi dat hang van kiem tra lai)
+    const customer = await getCurrentCustomer();
+    if (customer) {
+      const uses = await voucherUsesByCustomer(prisma, customer.MaKH, voucher.MaVoucher);
+      if (uses >= voucherLimitPerCustomer(voucher.GioiHanSuDung)) {
+        return NextResponse.json({ error: VOUCHER_USED_ERROR }, { status: 400 });
+      }
     }
 
     // Kiem tra don hang toi thieu

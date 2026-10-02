@@ -472,6 +472,7 @@ export default function AdminSanPhamPage() {
                     type="text"
                     disabled={!!editingProduct}
                     value={formData.maSP}
+                    maxLength={50}
                     onChange={(e) => setFormData({ ...formData, maSP: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 p-2.5 outline-none disabled:bg-slate-100"
                   />
@@ -499,6 +500,7 @@ export default function AdminSanPhamPage() {
                   required
                   placeholder="Ví dụ: Vợt Cầu Lông Yonex Astrox 88D Pro"
                   value={formData.tenSP}
+                  maxLength={200}
                   onChange={(e) => setFormData({ ...formData, tenSP: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 p-2.5 outline-none focus:border-[#f66315]"
                 />
@@ -537,6 +539,7 @@ export default function AdminSanPhamPage() {
                     type="text"
                     placeholder="3U, 4U... (bỏ trống với giày, balo)"
                     value={formData.trongLuong}
+                    maxLength={10}
                     onChange={(e) =>
                       setFormData({ ...formData, trongLuong: e.target.value })
                     }

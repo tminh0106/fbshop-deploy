@@ -27,8 +27,13 @@ export async function GET(request: Request) {
     const maxPriceParam = searchParams.get("maxPrice");
     const weightParam = searchParams.get("weight");
     const sortParam = searchParams.get("sort") || "name_asc";
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.max(1, parseInt(searchParams.get("limit") || "12", 10));
+    // Tham so sai (chu, so am) -> gia tri mac dinh; toi da 100 san pham/trang
+    const toInt = (v: string | null, def: number) => {
+      const n = parseInt(v || "", 10);
+      return Number.isFinite(n) && n >= 1 ? n : def;
+    };
+    const page = toInt(searchParams.get("page"), 1);
+    const limit = Math.min(100, toInt(searchParams.get("limit"), 12));
     const skip = (page - 1) * limit;
 
     const andConditions: any[] = [

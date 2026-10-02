@@ -46,6 +46,29 @@ function validateNumbers(giaBan: unknown, soLuong: unknown): string | null {
   return null;
 }
 
+// Ma SP: chu khong dau, so, _ va - (dung lam duong dan trang san pham), toi da 50 ky tu (cot VarChar 50)
+const CODE_RE = /^[A-Z0-9_-]{1,50}$/;
+const CODE_ERROR = "Mã sản phẩm tối đa 50 ký tự, chỉ gồm chữ không dấu, số, dấu gạch dưới (_) và gạch ngang (-)";
+
+// Ten, trong luong, danh muc. partial = sua: chi kiem truong duoc gui len
+async function validateInfo(body: { tenSP?: unknown; trongLuong?: unknown; maDanhMuc?: unknown }, partial: boolean) {
+  if (!partial || body.tenSP !== undefined) {
+    const ten = typeof body.tenSP === "string" ? body.tenSP.trim() : "";
+    if (!ten) return "Vui lòng nhập tên sản phẩm";
+    if (ten.length > 200) return "Tên sản phẩm tối đa 200 ký tự";
+  }
+  if (typeof body.trongLuong === "string" && body.trongLuong.trim().length > 10) {
+    return "Trọng lượng tối đa 10 ký tự (ví dụ: 4U, 3U/4U)";
+  }
+  if (!partial || body.maDanhMuc !== undefined) {
+    const dm = typeof body.maDanhMuc === "string" ? body.maDanhMuc : "";
+    if (!dm || !(await prisma.danhMuc.findUnique({ where: { MaDanhMuc: dm }, select: { MaDanhMuc: true } }))) {
+      return "Danh mục sản phẩm không tồn tại";
+    }
+  }
+  return null;
+}
+
 // GET: Danh sach san pham
 export async function GET(request: Request) {
   try {
@@ -104,14 +127,24 @@ export async function POST(request: Request) {
       );
     }
 
+    const code = String(maSP).trim().toUpperCase();
+    if (!CODE_RE.test(code)) {
+      return NextResponse.json({ error: CODE_ERROR }, { status: 400 });
+    }
+
     const numberError = validateNumbers(giaBan, soLuong);
     if (numberError) {
       return NextResponse.json({ error: numberError }, { status: 400 });
     }
 
+    const infoError = await validateInfo(body, false);
+    if (infoError) {
+      return NextResponse.json({ error: infoError }, { status: 400 });
+    }
+
     // Kiem tra trung ma
     const existing = await prisma.sanPham.findUnique({
-      where: { MaSP: maSP.trim() },
+      where: { MaSP: code },
     });
     if (existing) {
       return NextResponse.json({ error: "Mã sản phẩm đã tồn tại" }, { status: 409 });
@@ -124,7 +157,7 @@ export async function POST(request: Request) {
 
     const newProd = await prisma.sanPham.create({
       data: {
-        MaSP: maSP.trim().toUpperCase(),
+        MaSP: code,
         TenSP: tenSP.trim(),
         GiaBan: Number(giaBan),
         SoLuong: Number(soLuong) || 0,
@@ -161,9 +194,19 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: numberError }, { status: 400 });
     }
 
+    const infoError = await validateInfo(body, true);
+    if (infoError) {
+      return NextResponse.json({ error: infoError }, { status: 400 });
+    }
+
     const image = validateHinhAnh(hinhAnh);
     if (!image.ok) {
       return NextResponse.json({ error: image.error }, { status: 400 });
+    }
+
+    const current = await prisma.sanPham.findUnique({ where: { MaSP: maSP }, select: { MaSP: true } });
+    if (!current) {
+      return NextResponse.json({ error: "Sản phẩm không tồn tại hoặc đã bị xóa" }, { status: 404 });
     }
 
     const updated = await prisma.sanPham.update({

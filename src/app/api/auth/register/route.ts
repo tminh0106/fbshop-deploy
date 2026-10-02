@@ -15,6 +15,12 @@ export async function POST(request: Request) {
     if (!hoTen || typeof hoTen !== "string" || !hoTen.trim()) {
       return NextResponse.json({ error: "Họ tên không được để trống" }, { status: 400 });
     }
+    if (hoTen.trim().length > 100) {
+      return NextResponse.json({ error: "Họ tên tối đa 100 ký tự" }, { status: 400 });
+    }
+    if (typeof diaChi === "string" && diaChi.trim().length > 255) {
+      return NextResponse.json({ error: "Địa chỉ tối đa 255 ký tự" }, { status: 400 });
+    }
 
     const phoneRegex = /^0\d{9}$/;
     if (!soDienThoai || !phoneRegex.test(soDienThoai.trim())) {

@@ -254,6 +254,7 @@ export default function CheckoutPage() {
                       type="text"
                       placeholder="Nguyễn Văn A"
                       value={tenNguoiNhan}
+                      maxLength={100}
                       onChange={(e) => setTenNguoiNhan(e.target.value)}
                       className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
                         formErrors.tenNguoiNhan
@@ -301,6 +302,7 @@ export default function CheckoutPage() {
                     rows={2}
                     placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..."
                     value={diaChiNhan}
+                    maxLength={255}
                     onChange={(e) => setDiaChiNhan(e.target.value)}
                     className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none transition-all ${
                       formErrors.diaChiNhan
@@ -324,6 +326,7 @@ export default function CheckoutPage() {
                     rows={2}
                     placeholder="Ví dụ: Căng cước Yonex BG65 11kg, giao giờ hành chính..."
                     value={ghiChu}
+                    maxLength={400}
                     onChange={(e) => setGhiChu(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#f66315]"
                   />
